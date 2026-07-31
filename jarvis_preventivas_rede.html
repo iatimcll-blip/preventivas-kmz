@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jarvis MCLL — Preventivas de Rede</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0a0f14;
+    --panel:#0f161d;
+    --panel-2:#141d26;
+    --line:#1e2b36;
+    --line-soft:#18232e;
+    --ink:#e7eef3;
+    --ink-2:#93a4b1;
+    --ink-3:#5f7080;
+    --optic:#22d3ee;        /* luz na fibra */
+    --optic-dim:#0e5b66;
+    --done:#34d399;         /* preventiva feita / coberto */
+    --warn:#f59e0b;         /* pendente */
+    --danger:#f87171;
+    --mono:ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --side:360px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    font-family:var(--sans);color:var(--ink);background:var(--bg);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+
+  /* ---------- Top bar ---------- */
+  header{
+    height:52px;flex:0 0 52px;display:flex;align-items:center;gap:14px;
+    padding:0 16px;background:linear-gradient(180deg,#0f171f,#0b1219);
+    border-bottom:1px solid var(--line);z-index:1000;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px}
+  .brand .spark{
+    width:26px;height:26px;border-radius:7px;display:grid;place-items:center;
+    background:radial-gradient(circle at 30% 30%,#2af0ff,#0891a5);
+    box-shadow:0 0 0 1px #0b6b78,0 0 18px -4px var(--optic);
+  }
+  .brand .spark svg{width:15px;height:15px;display:block}
+  .brand small{display:block;font-weight:500;font-size:11px;color:var(--ink-3);letter-spacing:.4px}
+  .brand b{font-size:15px}
+  .kpis{margin-left:auto;display:flex;gap:8px}
+  .kpi{
+    background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:5px 11px;min-width:76px;text-align:right;line-height:1.1;
+  }
+  .kpi .n{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--optic)}
+  .kpi .n.done{color:var(--done)} .kpi .n.warn{color:var(--warn)}
+  .kpi .l{font-size:9.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.6px}
+
+  /* ---------- Layout ---------- */
+  .stage{flex:1;display:flex;min-height:0}
+  aside{
+    width:var(--side);flex:0 0 var(--side);background:var(--panel);
+    border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;
+  }
+  .scroll{overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+  .scroll::-webkit-scrollbar{width:9px}
+  .scroll::-webkit-scrollbar-thumb{background:#22323f;border-radius:9px;border:2px solid var(--panel)}
+  #map{flex:1;min-width:0;background:#050809}
+
+  section.block{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .block > h2{
+    margin:0;padding:10px 13px;font-size:11px;letter-spacing:.9px;text-transform:uppercase;
+    color:var(--ink-2);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line-soft);
+    background:linear-gradient(180deg,#16212b,#121a22);
+  }
+  .block > h2 .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--optic);letter-spacing:0}
+  .block .body{padding:13px}
+  .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+  .dot.optic{background:var(--optic);box-shadow:0 0 8px -1px var(--optic)}
+  .dot.done{background:var(--done)} .dot.warn{background:var(--warn)}
+
+  /* dropzone */
+  .drop{
+    border:1.5px dashed #274150;border-radius:10px;padding:16px 12px;text-align:center;
+    cursor:pointer;transition:.15s;background:#0e1922;color:var(--ink-2);
+  }
+  .drop:hover,.drop.hot{border-color:var(--optic);background:#0d2129;color:var(--ink)}
+  .drop svg{width:22px;height:22px;opacity:.8;margin-bottom:6px}
+  .drop b{color:var(--ink);font-weight:600}
+  .drop .hint{font-size:11px;color:var(--ink-3);margin-top:3px}
+
+  /* main file card */
+  .filecard{display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid var(--line);
+    border-radius:9px;background:#0e1922}
+  .filecard .meta{min-width:0;flex:1}
+  .filecard .meta .nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .filecard .meta .sub{font-size:11px;color:var(--ink-3);font-family:var(--mono)}
+  .icon-btn{
+    background:transparent;border:1px solid transparent;border-radius:7px;color:var(--ink-3);
+    width:28px;height:28px;display:grid;place-items:center;cursor:pointer;transition:.12s;flex:0 0 auto;
+  }
+  .icon-btn:hover{background:#1b2933;color:var(--ink)}
+  .icon-btn.danger:hover{color:var(--danger);background:#2a1618}
+  .icon-btn svg{width:15px;height:15px}
+
+  /* preventiva rows */
+  .prev-list{display:flex;flex-direction:column;gap:8px}
+  .prev{border:1px solid var(--line);border-radius:9px;background:#0e1922;overflow:hidden}
+  .prev.off{opacity:.5}
+  .prev .top{display:flex;align-items:center;gap:9px;padding:9px 10px}
+  .swatch{width:12px;height:12px;border-radius:3px;flex:0 0 12px;box-shadow:0 0 0 1px #00000055}
+  .prev .nm{flex:1;min-width:0;background:transparent;border:none;color:var(--ink);font:600 13px var(--sans);
+    padding:2px 0;outline:none;border-bottom:1px dashed transparent;width:100%}
+  .prev .nm:focus{border-bottom-color:var(--optic)}
+  .prev .grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:0 10px 10px}
+  .prev .grid.stats{grid-template-columns:repeat(3,1fr);padding-top:2px}
+  .field{display:flex;flex-direction:column;gap:2px}
+  .field label{font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.6px}
+  .field input{background:#0a1219;border:1px solid var(--line);border-radius:6px;color:var(--ink);
+    font:12px var(--mono);padding:5px 7px;outline:none;width:100%}
+  .field input:focus{border-color:var(--optic)}
+  .mini{text-align:center;background:#0a1219;border:1px solid var(--line-soft);border-radius:6px;padding:4px 2px}
+  .mini .v{font-family:var(--mono);font-size:13px;font-weight:600}
+  .mini .k{font-size:8.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px}
+  .mini .v.cov{color:var(--done)}
+  .prev .dist{display:flex;align-items:center;gap:8px;margin:0 10px 9px;padding:7px 10px;border-radius:8px;
+    background:linear-gradient(90deg,#0c2a22,#0b1a22);border:1px solid #143a2d}
+  .prev .dist svg{width:15px;height:15px;color:var(--done);flex:0 0 15px}
+  .prev .dist b{font-family:var(--mono);font-size:15px;color:var(--done);line-height:1}
+  .prev .dist span{font-size:11px;color:var(--ink-2)}
+  .prev .dist.none{background:#0e1922;border-color:var(--line)}
+  .prev .dist.none b,.prev .dist.none svg{color:var(--ink-3)}
+
+  /* coverage */
+  .cov-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .cov-head .pct{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--done);line-height:1}
+  .cov-head .frac{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  .bar{height:9px;border-radius:6px;background:#0a1219;border:1px solid var(--line-soft);overflow:hidden}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--optic),var(--done));transition:width .35s}
+  .slider-row{display:flex;align-items:center;gap:10px;margin-top:12px}
+  .slider-row input[type=range]{flex:1;accent-color:var(--optic)}
+  .slider-row .val{font-family:var(--mono);font-size:12px;color:var(--optic);min-width:56px;text-align:right}
+  .switch{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--ink-2);cursor:pointer;margin-top:11px;user-select:none}
+  .switch input{position:absolute;opacity:0}
+  .track{width:34px;height:19px;border-radius:12px;background:#22323f;position:relative;transition:.15s;flex:0 0 34px}
+  .track::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#7b8b98;transition:.15s}
+  .switch input:checked + .track{background:var(--optic-dim)}
+  .switch input:checked + .track::after{left:17px;background:var(--optic)}
+
+  /* buttons */
+  .btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px;border-radius:9px;
+    border:1px solid var(--line);background:#13202a;color:var(--ink);font:600 13px var(--sans);cursor:pointer;transition:.12s}
+  .btn:hover{border-color:var(--optic);background:#16303a}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn svg{width:15px;height:15px}
+  .btn.primary{background:linear-gradient(180deg,#0e94a6,#0a7c8c);border-color:#12b3c7;color:#eafeff}
+  .btn.primary:hover{background:linear-gradient(180deg,#12aec2,#0c8ea0)}
+  .btn-row{display:flex;gap:8px}
+
+  .empty{color:var(--ink-3);font-size:12px;text-align:center;padding:10px 4px;line-height:1.5}
+
+  /* legend on map */
+  .legend{position:absolute;left:12px;bottom:22px;z-index:600;background:#0d1720ee;backdrop-filter:blur(6px);
+    border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-size:11px;max-width:210px}
+  .legend h4{margin:0 0 6px;font-size:9.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink-3)}
+  .legend .lr{display:flex;align-items:center;gap:7px;padding:2px 0;color:var(--ink-2)}
+  .legend .lr span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .map-btns{position:absolute;right:12px;top:12px;z-index:600;display:flex;flex-direction:column;gap:7px}
+  .map-btns button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:#0d1720ee;
+    color:var(--ink);cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(6px)}
+  .map-btns button:hover{border-color:var(--optic);color:var(--optic)}
+  .map-btns button.active{border-color:var(--optic);color:var(--optic)}
+  .map-btns svg{width:17px;height:17px}
+
+  /* etiqueta "Preventiva + arquivo" fixa no mapa */
+  .leaflet-tooltip.prev-tip{background:none;border:none;box-shadow:none;padding:0;white-space:nowrap;font:inherit}
+  .leaflet-tooltip.prev-tip::before{display:none!important}
+  .prev-pill{display:inline-flex;align-items:center;gap:6px;font:700 11.5px var(--sans);color:#eafcff;cursor:pointer;
+    background:#0b141dee;backdrop-filter:blur(4px);border:1px solid #fff;border-radius:999px;padding:3px 10px 3px 7px}
+  .prev-pill svg{width:13px;height:13px;flex:0 0 13px}
+  .prev-pill .nm{max-width:180px;overflow:hidden;text-overflow:ellipsis}
+  .prev-pill .dt{color:#8aa0ad;font-weight:500;font-family:var(--mono);font-size:10px}
+
+  /* pino de câmera (marcador com foto) */
+  .photo-pin{width:26px;height:26px;border-radius:50% 50% 50% 3px;transform:rotate(45deg);
+    background:#0b141d;border:2px solid var(--pc);display:grid;place-items:center;box-shadow:0 2px 9px -2px #000}
+  .photo-pin svg{width:13px;height:13px;transform:rotate(-45deg)}
+  /* popup escuro + galeria */
+  .leaflet-popup-content-wrapper{background:#0f1922;color:var(--ink);border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 44px -14px #000}
+  .leaflet-popup-tip{background:#0f1922;border:1px solid var(--line)}
+  .leaflet-popup-content{margin:11px 13px;font-family:var(--sans)}
+  .leaflet-popup-close-button{color:var(--ink-3)!important}
+  .pv-pop b{font-size:13px;color:var(--ink)}
+  .pv-sub{font-size:11px;color:var(--ink-3);margin:2px 0 8px}
+  .pv-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;max-width:250px}
+  .pv-th{width:100%;height:72px;object-fit:cover;border-radius:6px;cursor:zoom-in;border:1px solid var(--line);background:#0a1219}
+  .pv-noimg{height:72px;border:1px dashed var(--line);border-radius:6px;display:grid;place-items:center;text-align:center;font-size:9.5px;color:var(--ink-3);line-height:1.35;padding:4px}
+  .cam-chip{display:inline-flex;align-items:center;gap:3px;font:600 10px var(--mono);color:var(--optic);
+    background:#0a2a30;border:1px solid #114b54;border-radius:6px;padding:2px 6px;flex:0 0 auto}
+  .cam-chip svg{width:11px;height:11px}
+  /* lightbox */
+  #lightbox{position:fixed;inset:0;z-index:4000;background:#000000e6;display:none;place-items:center;padding:26px;cursor:zoom-out}
+  #lightbox.show{display:grid}
+  #lightbox img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 24px 70px -12px #000}
+
+  /* toast */
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:3000;
+    background:#12202a;border:1px solid var(--line);border-left:3px solid var(--optic);border-radius:9px;
+    padding:11px 15px;font-size:13px;box-shadow:0 12px 40px -12px #000;opacity:0;pointer-events:none;transition:.25s;max-width:70vw}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.err{border-left-color:var(--danger)} #toast.ok{border-left-color:var(--done)}
+
+  .leaflet-container{background:#050809}
+  .save-badge{font-size:10px;color:var(--ink-3);display:flex;align-items:center;gap:5px;justify-content:center;padding-top:2px}
+  .save-badge .dot{width:6px;height:6px;flex:0 0 6px}
+
+  @media (max-width:820px){
+    :root{--side:100%}
+    .stage{flex-direction:column}
+    aside{width:100%;flex:0 0 auto;max-height:46vh;border-right:none;border-bottom:1px solid var(--line)}
+    #map{flex:1;min-height:280px}
+    .kpis{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  :focus-visible{outline:2px solid var(--optic);outline-offset:2px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="spark"><svg viewBox="0 0 24 24" fill="none" stroke="#062b30" stroke-width="2.4" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>
+    <div><b>Jarvis MCLL</b><small>Preventivas de Rede — Fibra Óptica</small></div>
+  </div>
+  <div class="kpis">
+    <div class="kpi"><div class="n" id="kpiPrev">0</div><div class="l">Preventivas</div></div>
+    <div class="kpi"><div class="n done" id="kpiCov">0%</div><div class="l">Cobertura</div></div>
+    <div class="kpi"><div class="n done" id="kpiDist">—</div><div class="l">Percurso</div></div>
+    <div class="kpi"><div class="n warn" id="kpiPend">—</div><div class="l">Pendentes</div></div>
+  </div>
+</header>
+
+<div class="stage">
+  <aside>
+    <div class="scroll">
+
+      <!-- REDE PRINCIPAL -->
+      <section class="block">
+        <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
+        <div class="body">
+          <div id="mainEmpty">
+            <div class="drop" id="dropMain">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+              <div><b>Anexar KMZ principal</b></div>
+              <div class="hint">Arraste o arquivo ou clique — .kmz ou .kml</div>
+            </div>
+          </div>
+          <div id="mainLoaded" style="display:none"></div>
+        </div>
+      </section>
+
+      <!-- PREVENTIVAS -->
+      <section class="block">
+        <h2><span class="dot done"></span>Preventivas realizadas <span class="tag" id="prevTag">0</span></h2>
+        <div class="body">
+          <div class="drop" id="dropPrev" style="margin-bottom:11px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
+            <div><b>Adicionar preventiva</b></div>
+            <div class="hint">Um ou vários KMZ secundários de uma vez</div>
+          </div>
+          <label class="switch" style="margin:0 0 11px"><input type="checkbox" id="showLabels" checked><span class="track"></span>Etiqueta “Preventiva + arquivo” fixa no mapa</label>
+          <div class="prev-list" id="prevList">
+            <div class="empty" id="prevEmpty">Nenhuma preventiva anexada.<br>Cada KMZ secundário vira uma preventiva sobreposta ao mapa.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COBERTURA -->
+      <section class="block" id="covBlock" style="display:none">
+        <h2><span class="dot optic"></span>Compatibilização / Cobertura</h2>
+        <div class="body">
+          <div class="cov-head">
+            <span class="pct" id="covPct">0%</span>
+            <span class="frac" id="covFrac">0 / 0 ativos</span>
+          </div>
+          <div class="bar"><i id="covBar" style="width:0%"></i></div>
+          <div class="slider-row">
+            <span style="font-size:11px;color:var(--ink-2)">Raio</span>
+            <input type="range" id="radius" min="10" max="500" step="5" value="50">
+            <span class="val" id="radiusVal">50 m</span>
+          </div>
+          <label class="switch"><input type="checkbox" id="hl" checked><span class="track"></span>Destacar ativos cobertos no mapa</label>
+          <p class="empty" style="text-align:left;margin:9px 0 0;padding:0">
+            Ativo pontual (CTO/POP/caixa) da rede principal é considerado <b style="color:var(--done)">coberto</b> quando há geometria de alguma preventiva <b>visível</b> dentro do raio.
+          </p>
+        </div>
+      </section>
+
+      <!-- EXPORTAR -->
+      <section class="block">
+        <h2><span class="dot warn"></span>Exportar</h2>
+        <div class="body" style="display:flex;flex-direction:column;gap:9px">
+          <button class="btn primary" id="expKmz" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+            KMZ consolidado (principal + preventivas)
+          </button>
+          <button class="btn" id="expCsv" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+            Relatório de preventivas (CSV)
+          </button>
+          <button class="btn" id="clearAll">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+            Limpar tudo
+          </button>
+          <div class="save-badge" id="saveBadge"><span class="dot done"></span>Sessão salva localmente</div>
+        </div>
+      </section>
+
+    </div>
+  </aside>
+
+  <div id="map">
+    <div class="map-btns">
+      <button id="btnSat" title="Alternar satélite / ruas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 0 1 20 0 10 10 0 0 1-20 0z"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></button>
+      <button id="btnFit" title="Enquadrar tudo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    </div>
+    <div class="legend" id="legend" style="display:none"><h4>Legenda</h4><div id="legendItems"></div></div>
+  </div>
+</div>
+
+<input type="file" id="fileMain" accept=".kmz,.kml" hidden>
+<input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
+<div id="lightbox"><img alt="Foto da preventiva"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+
+/* ============ Estado ============ */
+const LS_KEY = "jarvis_prev_rede_v2";
+const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
+let state = { main:null, preventivas:[], radius:50, highlight:true, showLabels:true };
+let colorIx = 0;
+
+/* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
+const PHOTOS = {};
+function findImg(src, images){
+  const keys=new Set(); const add=s=>{if(s)keys.add(s);};
+  const clean=src.replace(/^\.?\/+/,"");
+  add(src); add(clean);
+  try{add(decodeURIComponent(src));add(decodeURIComponent(clean));}catch(_){}
+  const base=clean.split("/").pop(); add(base);
+  try{add(decodeURIComponent(base));}catch(_){}
+  for(const k in images){ if(keys.has(k)) return images[k]; }
+  for(const k in images){ const kb=k.split("/").pop();
+    if(keys.has(kb)) return images[k];
+    try{ if(keys.has(decodeURIComponent(kb))) return images[k]; }catch(_){}
+  }
+  return null;
+}
+function processPhotos(p, images){
+  images=images||{};
+  (p.geojson.features||[]).forEach(f=>{
+    const props=f.properties||(f.properties={});
+    const resolved=[], seen=new Set(); let idx=0;
+    const addData=d=>{ if(!d||seen.has(d))return; seen.add(d); const key=p.id+"|"+(idx++); PHOTOS[key]=d; resolved.push("mem:"+key); };
+    const desc=props.description||"";
+    const imgRe=/<img[^>]*?src\s*=\s*["']([^"']+)["']/gi; let m;
+    while((m=imgRe.exec(desc))){
+      const src=m[1].trim();
+      if(/^https?:/i.test(src)){ if(!seen.has(src)){seen.add(src);resolved.push("url:"+src);} }
+      else if(/^data:/i.test(src)){ addData(src); }
+      else { addData(findImg(src,images)); }
+    }
+    // fallback: propriedade que seja um nome de imagem presente no KMZ
+    Object.values(props).forEach(v=>{ if(typeof v==="string"){ const s=v.trim();
+      if(/\.(jpe?g|png|gif|webp|bmp)$/i.test(s) && !/[<>]/.test(s)) addData(findImg(s,images)); } });
+    props._photos=resolved; props._hasPhoto=resolved.length>0;
+  });
+}
+function resolveTok(tok){ if(!tok)return null; if(tok.indexOf("url:")===0)return tok.slice(4); if(tok.indexOf("mem:")===0)return PHOTOS[tok.slice(4)]||null; return null; }
+function prevPhotoCount(p){ let c=0; (p.geojson.features||[]).forEach(f=>{ if(f.properties&&f.properties._photos)c+=f.properties._photos.length; }); return c; }
+function photoIcon(color){ return L.divIcon({className:"photo-pin-wrap",iconSize:[26,26],iconAnchor:[13,25],popupAnchor:[0,-24],
+  html:'<div class="photo-pin" style="--pc:'+color+'"><svg viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg></div>'}); }
+function openLightbox(src){ const lb=$("lightbox"); lb.querySelector("img").src=src; lb.classList.add("show"); }
+
+/* ============ Mapa ============ */
+const map = L.map("map",{preferCanvas:true, zoomControl:true}).setView([-4.5,-45],6);
+const canvas = L.canvas({padding:0.5});
+const tileStreet = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,attribution:"© OpenStreetMap"});
+const tileSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,attribution:"© Esri"});
+let satOn=false; tileStreet.addTo(map);
+document.getElementById("btnSat").onclick = function(){
+  satOn=!satOn; this.classList.toggle("active",satOn);
+  if(satOn){map.removeLayer(tileStreet);tileSat.addTo(map);} else {map.removeLayer(tileSat);tileStreet.addTo(map);}
+};
+document.getElementById("btnFit").onclick = fitAll;
+
+let mainLayerGroup=null, mainPointMarkers=[], mainAssets=[];
+const prevLayerGroups = {}; // id -> L.layerGroup
+
+/* ============ Utilidades ============ */
+const $=id=>document.getElementById(id);
+function toast(msg,type){const t=$("toast");t.textContent=msg;t.className="show "+(type||"");clearTimeout(t._t);t._t=setTimeout(()=>t.className="",3200);}
+function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+
+function haversine(aLat,aLng,bLat,bLng){
+  const R=6371000,toR=Math.PI/180;
+  const dLat=(bLat-aLat)*toR, dLng=(bLng-aLng)*toR;
+  const s=Math.sin(dLat/2)**2+Math.cos(aLat*toR)*Math.cos(bLat*toR)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(s));
+}
+
+/* percorre todas as coordenadas [lng,lat] de uma geometria */
+function eachCoord(geom, cb){
+  if(!geom) return;
+  if(geom.type==="GeometryCollection"){ (geom.geometries||[]).forEach(g=>eachCoord(g,cb)); return; }
+  const walk=c=>{ if(typeof c[0]==="number"){cb(c[0],c[1]);} else c.forEach(walk); };
+  if(geom.coordinates) walk(geom.coordinates);
+}
+/* coleta ativos pontuais (Point/MultiPoint) */
+function collectPoints(feature, out){
+  const g=feature.geometry; if(!g) return;
+  const nm=(feature.properties&&(feature.properties.name||feature.properties.Name))||"";
+  const push=(g2)=>{
+    if(!g2) return;
+    if(g2.type==="Point") out.push({lat:g2.coordinates[1],lng:g2.coordinates[0],name:nm});
+    else if(g2.type==="MultiPoint") g2.coordinates.forEach(c=>out.push({lat:c[1],lng:c[0],name:nm}));
+    else if(g2.type==="GeometryCollection") (g2.geometries||[]).forEach(push);
+  };
+  push(g);
+}
+function statsOf(gj){
+  let pts=0,lin=0,pol=0;
+  (gj.features||[]).forEach(f=>{
+    const walk=g=>{ if(!g)return;
+      const t=g.type;
+      if(t==="Point"){pts++;} else if(t==="MultiPoint"){pts+=g.coordinates.length;}
+      else if(t==="LineString"){lin++;} else if(t==="MultiLineString"){lin+=g.coordinates.length;}
+      else if(t==="Polygon"){pol++;} else if(t==="MultiPolygon"){pol+=g.coordinates.length;}
+      else if(t==="GeometryCollection"){(g.geometries||[]).forEach(walk);}
+    };
+    walk(f.geometry);
+  });
+  return {pts,lin,pol,total:(gj.features||[]).length};
+}
+
+/* extensão total das linhas (trajeto percorrido) em metros */
+function lineLength(gj){
+  let m=0;
+  const walk=coords=>{ for(let i=1;i<coords.length;i++){ const a=coords[i-1],b=coords[i]; m+=haversine(a[1],a[0],b[1],b[0]); } };
+  const handle=g=>{ if(!g)return;
+    if(g.type==="LineString") walk(g.coordinates);
+    else if(g.type==="MultiLineString") g.coordinates.forEach(walk);
+    else if(g.type==="GeometryCollection") (g.geometries||[]).forEach(handle);
+  };
+  (gj.features||[]).forEach(f=>handle(f.geometry));
+  return m;
+}
+function fmtDist(m){ return m>=1000 ? (m/1000).toFixed(2).replace(".",",")+" km" : Math.round(m)+" m"; }
+
+/* ============ Leitura de KMZ / KML ============ */
+async function readGeo(file){
+  const lower=file.name.toLowerCase();
+  let kmlText, images={};
+  if(lower.endsWith(".kml")){
+    kmlText=await file.text();
+  } else {
+    if(typeof JSZip==="undefined") throw new Error("Biblioteca de descompactação indisponível.");
+    const zip=await JSZip.loadAsync(await file.arrayBuffer());
+    let entry=null;
+    zip.forEach((p,e)=>{ if(!entry && p.toLowerCase().endsWith(".kml")) entry=e; });
+    if(!entry) throw new Error("Nenhum .kml encontrado dentro do KMZ.");
+    kmlText=await entry.async("string");
+    // extrai imagens embutidas -> data URI
+    const jobs=[];
+    zip.forEach((path,e)=>{
+      const mt=(path.match(/\.(jpe?g|png|gif|webp|bmp)$/i)||[])[1];
+      if(mt && !e.dir){ jobs.push(e.async("base64").then(b64=>{
+        const ext=mt.toLowerCase(); const mime = ext==="jpg"?"jpeg":ext;
+        images[path]="data:image/"+mime+";base64,"+b64;
+      })); }
+    });
+    await Promise.all(jobs);
+  }
+  if(typeof toGeoJSON==="undefined") throw new Error("Conversor KML indisponível.");
+  const dom=new DOMParser().parseFromString(kmlText,"text/xml");
+  if(dom.querySelector("parsererror")) throw new Error("KML inválido / corrompido.");
+  const gj=toGeoJSON.kml(dom);
+  if(!gj.features || !gj.features.length) throw new Error("Nenhuma feição (placemark) encontrada.");
+  return {geojson:gj, images};
+}
+
+/* ============ Render — rede principal ============ */
+function renderMain(){
+  if(mainLayerGroup){map.removeLayer(mainLayerGroup);}
+  mainPointMarkers=[]; mainAssets=[];
+  if(!state.main){ return; }
+  const gj=state.main.geojson;
+  (gj.features||[]).forEach(f=>collectPoints(f,mainAssets));
+
+  mainLayerGroup=L.geoJSON(gj,{
+    renderer:canvas,
+    style:f=>{
+      const p=f.properties||{};
+      return {color:p.stroke||"#7fb2c9", weight:(p["stroke-width"]||2), opacity:0.85, fillColor:p.fill||"#7fb2c9", fillOpacity:(p["fill-opacity"]!=null?p["fill-opacity"]:0.12)};
+    },
+    pointToLayer:(f,ll)=>{
+      const m=L.circleMarker(ll,{renderer:canvas,radius:4,weight:1.4,color:"#0b1219",fillColor:"#8fb7cc",fillOpacity:0.95});
+      m._asset={lat:ll.lat,lng:ll.lng};
+      mainPointMarkers.push(m);
+      return m;
+    },
+    onEachFeature:(f,l)=>{
+      const nm=(f.properties&&(f.properties.name||f.properties.Name));
+      if(nm) l.bindPopup("<b>"+esc(nm)+"</b><br><small style='color:#5f7080'>Rede principal</small>");
+    }
+  }).addTo(map);
+}
+
+/* ============ Render — preventivas ============ */
+function renderPrev(p){
+  if(prevLayerGroups[p.id]){map.removeLayer(prevLayerGroups[p.id]);delete prevLayerGroups[p.id];}
+  const group=L.featureGroup();
+
+  // halo de destaque do trecho realizado (traço largo translúcido por baixo)
+  L.geoJSON(p.geojson,{
+    renderer:canvas, interactive:false,
+    style:{color:p.color,weight:10,opacity:0.28,fillColor:p.color,fillOpacity:0.12},
+    pointToLayer:(f,ll)=>L.circleMarker(ll,{renderer:canvas,radius:11,weight:0,fillColor:p.color,fillOpacity:0.22,interactive:false})
+  }).addTo(group);
+
+  // camada principal da preventiva
+  const main=L.geoJSON(p.geojson,{
+    renderer:canvas,
+    style:{color:p.color,weight:3,opacity:0.98,fillColor:p.color,fillOpacity:0.20},
+    pointToLayer:(f,ll)=>{
+      if(f.properties&&f.properties._hasPhoto) return L.marker(ll,{icon:photoIcon(p.color)});
+      return L.circleMarker(ll,{renderer:canvas,radius:5,weight:1.6,color:"#0b1219",fillColor:p.color,fillOpacity:1});
+    },
+    onEachFeature:(f,l)=>{
+      const props=f.properties||{};
+      const nm=props.name||props.Name||"";
+      const photos=props._photos||[];
+      let html='<div class="pv-pop"><b>'+esc(nm||p.name)+'</b>'
+        +'<div class="pv-sub">Preventiva: '+esc(p.name)+(p.date?" • "+esc(p.date):"")+'</div>';
+      if(photos.length){
+        html+='<div class="pv-gal">';
+        photos.forEach(tok=>{ const src=resolveTok(tok);
+          html+= src ? '<img class="pv-th" src="'+src+'" data-full="'+src+'" alt="foto da preventiva">'
+                     : '<div class="pv-noimg">Foto no KMZ<br><small>reanexe o arquivo para ver</small></div>'; });
+        html+='</div>';
+      }
+      html+='</div>';
+      l.bindPopup(html,{maxWidth:280});
+      l.on("popupopen",e=>{ const c=e.popup.getElement(); if(c) c.querySelectorAll(".pv-th").forEach(img=>img.onclick=()=>openLightbox(img.dataset.full)); });
+    }
+  }).addTo(group);
+
+  // etiqueta fixa "Preventiva + arquivo" ancorada no centro do trecho
+  if(state.showLabels){
+    let center=null; try{ center=main.getBounds().getCenter(); }catch(_){}
+    if(center){
+      const dt=p.date?'<span class="dt">'+esc(p.date)+'</span>':'';
+      const dm=lineLength(p.geojson);
+      const dd=dm>0?'<span class="dt">'+fmtDist(dm)+'</span>':'';
+      const html='<div class="prev-pill" style="border-color:'+p.color+';box-shadow:0 0 0 1px '+p.color+'55,0 0 16px -4px '+p.color+'">'
+        +'<svg viewBox="0 0 24 24" fill="none" stroke="'+p.color+'" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>'
+        +'<b>Preventiva</b> · <span class="nm">'+esc(p.name)+'</span>'+dt+dd+'</div>';
+      const anchor=L.circleMarker(center,{radius:0,opacity:0,fillOpacity:0,interactive:false});
+      anchor.bindTooltip(html,{permanent:true,direction:"top",className:"prev-tip",offset:[0,-2],interactive:true});
+      anchor.on("add",()=>anchor.openTooltip());
+      anchor.on("tooltipopen",e=>{ const el=e.tooltip.getElement(); if(el)el.querySelector(".prev-pill").onclick=()=>{ if(main.getLayers().length)map.fitBounds(main.getBounds(),{padding:[50,50]}); }; });
+      anchor.addTo(group);
+    }
+  }
+
+  prevLayerGroups[p.id]=group;
+  if(p.visible!==false) group.addTo(map);
+}
+
+/* ============ Cobertura / compatibilização ============ */
+function computeCoverage(){
+  const covBlock=$("covBlock");
+  if(!state.main){ covBlock.style.display="none"; return {covered:0,total:0}; }
+  const total=mainAssets.length;
+  const radiusM=state.radius;
+  const cellDeg=Math.max(radiusM/111320,1e-5);
+
+  // índice espacial de vértices das preventivas VISÍVEIS
+  const idx=new Map();
+  const add=(lat,lng)=>{const k=Math.floor(lat/cellDeg)+":"+Math.floor(lng/cellDeg);let a=idx.get(k);if(!a){a=[];idx.set(k,a);}a.push([lat,lng]);};
+  state.preventivas.forEach(p=>{ if(p.visible===false) return; (p.geojson.features||[]).forEach(f=>eachCoord(f.geometry,(lng,lat)=>add(lat,lng))); });
+
+  let covered=0;
+  mainAssets.forEach(a=>{
+    a.covered=false;
+    if(idx.size===0) return;
+    const ci=Math.floor(a.lat/cellDeg), cj=Math.floor(a.lng/cellDeg);
+    let hit=false;
+    for(let di=-1;di<=1&&!hit;di++)for(let dj=-1;dj<=1&&!hit;dj++){
+      const arr=idx.get((ci+di)+":"+(cj+dj)); if(!arr) continue;
+      for(const v of arr){ if(haversine(a.lat,a.lng,v[0],v[1])<=radiusM){hit=true;break;} }
+    }
+    if(hit){covered++;a.covered=true;}
+  });
+
+  // recolorir marcadores principais
+  const hl=state.highlight;
+  mainPointMarkers.forEach(m=>{
+    const as=mainAssets.find(x=>x.lat===m._asset.lat&&x.lng===m._asset.lng);
+    const done=hl&&as&&as.covered;
+    m.setStyle({fillColor:done?"#34d399":"#8fb7cc",color:done?"#08351f":"#0b1219",radius:done?5:4});
+  });
+
+  covBlock.style.display="";
+  const pct=total?Math.round(covered/total*100):0;
+  $("covPct").textContent=pct+"%";
+  $("covFrac").textContent=covered+" / "+total+" ativos";
+  $("covBar").style.width=pct+"%";
+  return {covered,total};
+}
+
+/* ============ Sidebar / KPIs ============ */
+function renderMainCard(){
+  const empty=$("mainEmpty"), loaded=$("mainLoaded"), tag=$("mainTag");
+  if(!state.main){ empty.style.display=""; loaded.style.display="none"; tag.textContent=""; return; }
+  empty.style.display="none"; loaded.style.display="";
+  const s=statsOf(state.main.geojson);
+  tag.textContent=s.total+" feições";
+  loaded.innerHTML=`
+    <div class="filecard">
+      <span class="dot optic"></span>
+      <div class="meta"><div class="nm">${esc(state.main.name)}</div>
+        <div class="sub">${s.pts} pontos · ${s.lin} linhas · ${s.pol} áreas</div></div>
+      <button class="icon-btn" id="mainZoom" title="Enquadrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="icon-btn danger" id="mainDel" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div>`;
+  $("mainZoom").onclick=()=>{ if(mainLayerGroup)map.fitBounds(mainLayerGroup.getBounds(),{padding:[40,40]}); };
+  $("mainDel").onclick=()=>{ if(!confirm("Remover a rede principal? As preventivas continuam.")) return; state.main=null; renderMain(); refresh(); };
+}
+
+function renderPrevList(){
+  const list=$("prevList");
+  if(!state.preventivas.length){ list.innerHTML='<div class="empty" id="prevEmpty">Nenhuma preventiva anexada.<br>Cada KMZ secundário vira uma preventiva sobreposta ao mapa.</div>'; return; }
+  list.innerHTML="";
+  state.preventivas.forEach(p=>{
+    const s=statsOf(p.geojson);
+    const covTxt = p._cov!=null ? p._cov : "—";
+    const nFotos = prevPhotoCount(p);
+    const dist = lineLength(p.geojson);
+    const distRow = dist>0
+      ? '<div class="dist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12a3 3 0 0 0 3 3h6"/><circle cx="6" cy="18" r="2"/><path d="M15 15l3 3-3 3"/></svg><b>'+fmtDist(dist)+'</b><span>percorridos</span></div>'
+      : '<div class="dist none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12a3 3 0 0 0 3 3h6"/><circle cx="6" cy="18" r="2"/><path d="M15 15l3 3-3 3"/></svg><b>—</b><span>sem trajeto (linha) no KMZ</span></div>';
+    const camChip = nFotos ? '<span class="cam-chip" title="'+nFotos+' foto(s) neste KMZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>'+nFotos+'</span>' : '';
+    const el=document.createElement("div");
+    el.className="prev"+(p.visible===false?" off":"");
+    el.innerHTML=`
+      <div class="top">
+        <span class="swatch" style="background:${p.color}"></span>
+        <input class="nm" value="${esc(p.name)}" data-id="${p.id}" aria-label="Nome da preventiva">
+        ${camChip}
+        <button class="icon-btn" data-act="vis" data-id="${p.id}" title="Mostrar/ocultar">
+          ${p.visible===false
+            ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A9 9 0 0 1 21 12a10 10 0 0 1-3.1 3.8M6.5 6.6A10 10 0 0 0 3 12a9 9 0 0 0 12 6.4"/></svg>'
+            : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'}
+        </button>
+        <button class="icon-btn" data-act="zoom" data-id="${p.id}" title="Enquadrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        <button class="icon-btn danger" data-act="del" data-id="${p.id}" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+      </div>
+      <div class="grid">
+        <div class="field"><label>Data</label><input type="date" value="${esc(p.date||"")}" data-field="date" data-id="${p.id}"></div>
+        <div class="field"><label>GA / Técnico</label><input type="text" placeholder="ex.: GA São Luís" value="${esc(p.ga||"")}" data-field="ga" data-id="${p.id}"></div>
+      </div>
+      <div class="dist-slot">${distRow}</div>
+      <div class="grid stats">
+        <div class="mini"><div class="v">${s.pts}</div><div class="k">Pontos</div></div>
+        <div class="mini"><div class="v">${s.lin}</div><div class="k">Linhas</div></div>
+        <div class="mini"><div class="v cov">${covTxt}</div><div class="k">Ativos cob.</div></div>
+      </div>`;
+    list.appendChild(el);
+  });
+
+  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);persist();refreshLegend();}});
+  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p[e.target.dataset.field]=e.target.value;if(e.target.dataset.field==="date")renderPrev(p);persist();}});
+  list.querySelectorAll("[data-act]").forEach(b=>b.onclick=e=>{
+    const p=find(b.dataset.id); if(!p) return;
+    const act=b.dataset.act;
+    if(act==="vis"){ p.visible=!(p.visible!==false); renderPrev(p); refresh(); }
+    else if(act==="zoom"){ const lg=prevLayerGroups[p.id]; if(lg&&lg.getLayers().length){map.fitBounds(lg.getBounds(),{padding:[40,40]});} }
+    else if(act==="del"){ if(!confirm("Remover a preventiva \""+p.name+"\"?")) return;
+      if(prevLayerGroups[p.id]){map.removeLayer(prevLayerGroups[p.id]);delete prevLayerGroups[p.id];}
+      state.preventivas=state.preventivas.filter(x=>x.id!==p.id); refresh(); }
+  });
+}
+const find=id=>state.preventivas.find(p=>p.id===id);
+
+function refreshLegend(){
+  const leg=$("legend"), items=$("legendItems");
+  if(!state.main && !state.preventivas.length){ leg.style.display="none"; return; }
+  leg.style.display=""; items.innerHTML="";
+  if(state.main) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#8fb7cc"></span><span>Rede principal</span></div>`;
+  const anyCov=mainAssets.some(a=>a.covered);
+  if(anyCov) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#34d399"></span><span>Ativo coberto</span></div>`;
+  state.preventivas.forEach(p=>{ if(p.visible===false)return; items.innerHTML+=`<div class="lr"><span class="swatch" style="background:${p.color}"></span><span>${esc(p.name)}</span></div>`; });
+}
+
+function updateKpis(cov){
+  $("kpiPrev").textContent=state.preventivas.length;
+  $("prevTag").textContent=state.preventivas.length;
+  let totM=0; state.preventivas.forEach(p=>totM+=lineLength(p.geojson));
+  $("kpiDist").textContent = totM>0 ? fmtDist(totM) : "—";
+  if(state.main && cov.total){
+    $("kpiCov").textContent=Math.round(cov.covered/cov.total*100)+"%";
+    $("kpiPend").textContent=(cov.total-cov.covered);
+  } else { $("kpiCov").textContent="—"; $("kpiPend").textContent="—"; }
+  const has=state.main||state.preventivas.length;
+  $("expKmz").disabled=!has; $("expCsv").disabled=!state.preventivas.length;
+}
+
+/* recalcula cobertura por preventiva (para a coluna "ativos cob.") */
+function coveragePerPrev(){
+  if(!state.main){ state.preventivas.forEach(p=>p._cov=null); return; }
+  const radiusM=state.radius, cellDeg=Math.max(radiusM/111320,1e-5);
+  state.preventivas.forEach(p=>{
+    if(p.visible===false){p._cov="off";return;}
+    const idx=new Map();
+    const add=(lat,lng)=>{const k=Math.floor(lat/cellDeg)+":"+Math.floor(lng/cellDeg);let a=idx.get(k);if(!a){a=[];idx.set(k,a);}a.push([lat,lng]);};
+    (p.geojson.features||[]).forEach(f=>eachCoord(f.geometry,(lng,lat)=>add(lat,lng)));
+    let c=0;
+    mainAssets.forEach(a=>{
+      const ci=Math.floor(a.lat/cellDeg),cj=Math.floor(a.lng/cellDeg);let hit=false;
+      for(let di=-1;di<=1&&!hit;di++)for(let dj=-1;dj<=1&&!hit;dj++){const arr=idx.get((ci+di)+":"+(cj+dj));if(!arr)continue;for(const v of arr){if(haversine(a.lat,a.lng,v[0],v[1])<=radiusM){hit=true;break;}}}
+      if(hit)c++;
+    });
+    p._cov=c;
+  });
+}
+
+function refresh(){
+  renderMainCard();
+  const cov=computeCoverage();
+  coveragePerPrev();
+  renderPrevList();
+  refreshLegend();
+  updateKpis(cov);
+  persist();
+}
+
+function fitAll(){
+  const groups=[]; if(mainLayerGroup)groups.push(mainLayerGroup);
+  Object.values(prevLayerGroups).forEach(g=>{if(map.hasLayer(g))groups.push(g);});
+  const withLayers=groups.filter(g=>g.getLayers().length);
+  if(!withLayers.length) return;
+  let b=withLayers[0].getBounds(); withLayers.slice(1).forEach(g=>b.extend(g.getBounds()));
+  if(b.isValid()) map.fitBounds(b,{padding:[50,50]});
+}
+
+/* ============ Uploads ============ */
+async function loadMain(file){
+  try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file);
+    state.main={name:file.name.replace(/\.(kmz|kml)$/i,""),geojson:gj,addedAt:Date.now()};
+    renderMain(); refresh(); if(mainLayerGroup)map.fitBounds(mainLayerGroup.getBounds(),{padding:[50,50]});
+    toast("Rede principal carregada.","ok");
+  }catch(e){ toast("Erro: "+e.message,"err"); }
+}
+async function addPrev(files){
+  let ok=0,fail=0;
+  for(const file of files){
+    try{ const {geojson:gj,images}=await readGeo(file);
+      const p={id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),date:todayISO(),ga:"",color:COLORS[colorIx++%COLORS.length],visible:true,geojson:gj};
+      processPhotos(p,images);
+      state.preventivas.push(p); renderPrev(p); ok++;
+    }catch(e){ fail++; console.warn(file.name,e); }
+  }
+  refresh();
+  if(ok&&!fail) toast(ok+" preventiva(s) adicionada(s).","ok");
+  else if(ok&&fail) toast(ok+" adicionada(s), "+fail+" com erro.","err");
+  else toast("Falha ao ler o(s) arquivo(s).","err");
+}
+
+/* dropzones + inputs */
+function wireDrop(zone,input,handler){
+  zone.onclick=()=>input.click();
+  input.onchange=e=>{ if(e.target.files.length)handler(e.target.files); input.value=""; };
+  ["dragenter","dragover"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add("hot");}));
+  ["dragleave","drop"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove("hot");}));
+  zone.addEventListener("drop",e=>{ if(e.dataTransfer.files.length)handler(e.dataTransfer.files); });
+}
+wireDrop($("dropMain"),$("fileMain"),f=>loadMain(f[0]));
+wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
+
+/* radius + highlight */
+$("radius").oninput=e=>{ state.radius=+e.target.value; $("radiusVal").textContent=state.radius+" m"; };
+$("radius").onchange=()=>refresh();
+$("hl").onchange=e=>{ state.highlight=e.target.checked; refresh(); };
+$("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventivas.forEach(renderPrev); persist(); };
+
+/* limpar */
+$("clearAll").onclick=()=>{
+  if(!confirm("Limpar rede principal e todas as preventivas?")) return;
+  if(mainLayerGroup)map.removeLayer(mainLayerGroup);
+  Object.values(prevLayerGroups).forEach(g=>map.removeLayer(g));
+  Object.keys(prevLayerGroups).forEach(k=>delete prevLayerGroups[k]);
+  state={main:null,preventivas:[],radius:state.radius,highlight:state.highlight};
+  mainLayerGroup=null; renderMain(); refresh(); localStorage.removeItem(LS_KEY);
+  toast("Tudo limpo.","ok");
+};
+
+/* ============ Persistência ============ */
+let persistT=null;
+function persist(){
+  clearTimeout(persistT);
+  persistT=setTimeout(()=>{
+    const badge=$("saveBadge");
+    try{
+      const slim={v:2,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
+        main:state.main?{name:state.main.name,geojson:state.main.geojson,addedAt:state.main.addedAt}:null,
+        preventivas:state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}))};
+      localStorage.setItem(LS_KEY,JSON.stringify(slim));
+      badge.innerHTML='<span class="dot done"></span>Sessão salva localmente';
+    }catch(e){
+      badge.innerHTML='<span class="dot warn"></span>Dados grandes — sessão não salva (reanexe ao recarregar)';
+    }
+  },400);
+}
+function restore(){
+  try{
+    const raw=localStorage.getItem(LS_KEY); if(!raw) return;
+    const d=JSON.parse(raw);
+    state.radius=d.radius||50; state.highlight=d.highlight!==false; state.showLabels=d.showLabels!==false;
+    $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m"; $("hl").checked=state.highlight; $("showLabels").checked=state.showLabels;
+    state.main=d.main||null; state.preventivas=d.preventivas||[];
+    colorIx=state.preventivas.length;
+    renderMain(); state.preventivas.forEach(renderPrev);
+    refresh();
+    setTimeout(fitAll,200);
+    if(state.main||state.preventivas.length) toast("Sessão anterior restaurada.","ok");
+  }catch(e){ console.warn("restore",e); }
+}
+
+/* ============ Exportação ============ */
+function hexToKml(hex){ // #RRGGBB -> aabbggrr
+  const h=(hex||"#ffffff").replace("#",""); const r=h.slice(0,2),g=h.slice(2,4),b=h.slice(4,6);
+  return "ff"+b+g+r;
+}
+function coordsStr(coords){ // array de [lng,lat(,alt)]
+  return coords.map(c=>c[0]+","+c[1]+","+(c[2]||0)).join(" ");
+}
+function geomToKml(geom){
+  if(!geom) return "";
+  switch(geom.type){
+    case "Point": return "<Point><coordinates>"+coordsStr([geom.coordinates])+"</coordinates></Point>";
+    case "MultiPoint": return "<MultiGeometry>"+geom.coordinates.map(c=>"<Point><coordinates>"+coordsStr([c])+"</coordinates></Point>").join("")+"</MultiGeometry>";
+    case "LineString": return "<LineString><tessellate>1</tessellate><coordinates>"+coordsStr(geom.coordinates)+"</coordinates></LineString>";
+    case "MultiLineString": return "<MultiGeometry>"+geom.coordinates.map(l=>"<LineString><coordinates>"+coordsStr(l)+"</coordinates></LineString>").join("")+"</MultiGeometry>";
+    case "Polygon": return "<Polygon><outerBoundaryIs><LinearRing><coordinates>"+coordsStr(geom.coordinates[0])+"</coordinates></LinearRing></outerBoundaryIs></Polygon>";
+    case "MultiPolygon": return "<MultiGeometry>"+geom.coordinates.map(poly=>"<Polygon><outerBoundaryIs><LinearRing><coordinates>"+coordsStr(poly[0])+"</coordinates></LinearRing></outerBoundaryIs></Polygon>").join("")+"</MultiGeometry>";
+    case "GeometryCollection": return "<MultiGeometry>"+(geom.geometries||[]).map(geomToKml).join("")+"</MultiGeometry>";
+    default: return "";
+  }
+}
+function folderKml(name,styleId,gj){
+  const pk=(gj.features||[]).map(f=>{
+    const nm=(f.properties&&(f.properties.name||f.properties.Name))||"";
+    const g=geomToKml(f.geometry); if(!g) return "";
+    return "<Placemark><name>"+esc(nm)+"</name><styleUrl>#"+styleId+"</styleUrl>"+g+"</Placemark>";
+  }).join("");
+  return "<Folder><name>"+esc(name)+"</name>"+pk+"</Folder>";
+}
+function buildKml(){
+  let styles="", folders="";
+  styles+='<Style id="sMain"><LineStyle><color>ff9cb27f</color><width>2</width></LineStyle><PolyStyle><color>309cb27f</color></PolyStyle><IconStyle><color>ffcc b78f</color></IconStyle></Style>';
+  if(state.main) folders+=folderKml("Rede principal — "+state.main.name,"sMain",state.main.geojson);
+  state.preventivas.forEach((p,i)=>{
+    const c=hexToKml(p.color);
+    styles+='<Style id="sP'+i+'"><LineStyle><color>'+c+'</color><width>3</width></LineStyle><PolyStyle><color>'+("60"+c.slice(2))+'</color></PolyStyle><IconStyle><color>'+c+'</color></IconStyle></Style>';
+    const label=p.name+(p.date?" ("+p.date+")":"")+(p.ga?" — "+p.ga:"");
+    folders+=folderKml("Preventiva — "+label,"sP"+i,p.geojson);
+  });
+  return '<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Jarvis MCLL — Consolidado de Preventivas</name>'+styles+folders+'</Document></kml>';
+}
+function download(blob,filename){
+  const url=URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+$("expKmz").onclick=async()=>{
+  try{
+    const kml=buildKml().replace("ffcc b78f","ffccb78f");
+    const zip=new JSZip(); zip.file("doc.kml",kml);
+    const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE"});
+    download(blob,"consolidado_preventivas_"+todayISO()+".kmz");
+    toast("KMZ consolidado gerado.","ok");
+  }catch(e){ toast("Erro ao gerar KMZ: "+e.message,"err"); }
+};
+$("expCsv").onclick=()=>{
+  const rows=[["Preventiva","Data","GA/Tecnico","Pontos","Linhas","Areas","Percurso_km","Ativos_cobertos","Visivel"]];
+  state.preventivas.forEach(p=>{const s=statsOf(p.geojson);const km=(lineLength(p.geojson)/1000).toFixed(3).replace(".",",");rows.push([p.name,p.date||"",p.ga||"",s.pts,s.lin,s.pol,km,(p._cov==null||p._cov==="off"?"":p._cov),p.visible===false?"nao":"sim"]);});
+  const csv="\uFEFF"+rows.map(r=>r.map(c=>{const s=String(c);return /[",;\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;}).join(";")).join("\n");
+  download(new Blob([csv],{type:"text/csv;charset=utf-8"}),"relatorio_preventivas_"+todayISO()+".csv");
+  toast("Relatório CSV exportado.","ok");
+};
+
+/* ============ Start ============ */
+$("lightbox").onclick=()=>$("lightbox").classList.remove("show");
+document.addEventListener("keydown",e=>{ if(e.key==="Escape")$("lightbox").classList.remove("show"); });
+restore();
+setTimeout(()=>map.invalidateSize(),300);
+window.addEventListener("resize",()=>map.invalidateSize());
+</script>
+</body>
+</html>
