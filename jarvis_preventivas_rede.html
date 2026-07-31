@@ -252,14 +252,13 @@
       <section class="block">
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
-          <div id="mainEmpty">
-            <div class="drop" id="dropMain">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
-              <div><b>Anexar KMZ principal</b></div>
-              <div class="hint">Arraste o arquivo ou clique — .kmz ou .kml</div>
-            </div>
+          <div class="drop" id="dropMain">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+            <div><b>Anexar KMZ principal</b></div>
+            <div class="hint">Arraste um ou vários arquivos, ou clique — .kmz ou .kml</div>
           </div>
-          <div id="mainLoaded" style="display:none"></div>
+          <div class="empty" id="mainEmpty" style="margin-top:11px">Nenhum arquivo da rede principal anexado.</div>
+          <div id="mainLoaded" style="display:none;margin-top:11px"></div>
         </div>
       </section>
 
@@ -332,7 +331,7 @@
   </div>
 </div>
 
-<input type="file" id="fileMain" accept=".kmz,.kml" hidden>
+<input type="file" id="fileMain" accept=".kmz,.kml" multiple hidden>
 <input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
 <div id="lightbox"><img alt="Foto da preventiva"></div>
 <div id="toast"></div>
@@ -343,7 +342,7 @@
 /* ============ Estado ============ */
 const LS_KEY = "jarvis_prev_rede_v2";
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
-let state = { main:null, preventivas:[], radius:50, highlight:true, showLabels:true };
+let state = { mains:[], preventivas:[], radius:50, highlight:true, showLabels:true };
 let colorIx = 0;
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
@@ -400,7 +399,8 @@ document.getElementById("btnSat").onclick = function(){
 };
 document.getElementById("btnFit").onclick = fitAll;
 
-let mainLayerGroup=null, mainPointMarkers=[], mainAssets=[];
+let mainPointMarkers=[], mainAssets=[];
+const mainLayerGroups = {}; // id -> L.geoJSON layer
 const prevLayerGroups = {}; // id -> L.layerGroup
 
 /* ============ Utilidades ============ */
@@ -498,14 +498,10 @@ async function readGeo(file){
 }
 
 /* ============ Render — rede principal ============ */
-function renderMain(){
-  if(mainLayerGroup){map.removeLayer(mainLayerGroup);}
-  mainPointMarkers=[]; mainAssets=[];
-  if(!state.main){ return; }
-  const gj=state.main.geojson;
+function renderMainOne(mo){
+  const gj=mo.geojson;
   (gj.features||[]).forEach(f=>collectPoints(f,mainAssets));
-
-  mainLayerGroup=L.geoJSON(gj,{
+  const lg=L.geoJSON(gj,{
     renderer:canvas,
     style:f=>{
       const p=f.properties||{};
@@ -519,9 +515,15 @@ function renderMain(){
     },
     onEachFeature:(f,l)=>{
       const nm=(f.properties&&(f.properties.name||f.properties.Name));
-      if(nm) l.bindPopup("<b>"+esc(nm)+"</b><br><small style='color:#5f7080'>Rede principal</small>");
+      if(nm) l.bindPopup("<b>"+esc(nm)+"</b><br><small style='color:#5f7080'>"+esc(mo.name)+"</small>");
     }
   }).addTo(map);
+  mainLayerGroups[mo.id]=lg;
+}
+function renderMain(){
+  Object.keys(mainLayerGroups).forEach(id=>{map.removeLayer(mainLayerGroups[id]);delete mainLayerGroups[id];});
+  mainPointMarkers=[]; mainAssets=[];
+  state.mains.forEach(renderMainOne);
 }
 
 /* ============ Render — preventivas ============ */
@@ -588,7 +590,7 @@ function renderPrev(p){
 /* ============ Cobertura / compatibilização ============ */
 function computeCoverage(){
   const covBlock=$("covBlock");
-  if(!state.main){ covBlock.style.display="none"; return {covered:0,total:0}; }
+  if(!state.mains.length){ covBlock.style.display="none"; return {covered:0,total:0}; }
   const total=mainAssets.length;
   const radiusM=state.radius;
   const cellDeg=Math.max(radiusM/111320,1e-5);
@@ -628,22 +630,28 @@ function computeCoverage(){
 }
 
 /* ============ Sidebar / KPIs ============ */
-function renderMainCard(){
+function renderMainList(){
   const empty=$("mainEmpty"), loaded=$("mainLoaded"), tag=$("mainTag");
-  if(!state.main){ empty.style.display=""; loaded.style.display="none"; tag.textContent=""; return; }
-  empty.style.display="none"; loaded.style.display="";
-  const s=statsOf(state.main.geojson);
-  tag.textContent=s.total+" feições";
-  loaded.innerHTML=`
-    <div class="filecard">
+  if(!state.mains.length){ empty.style.display=""; loaded.style.display="none"; tag.textContent=""; return; }
+  empty.style.display="none"; loaded.style.display="flex"; loaded.style.flexDirection="column"; loaded.style.gap="8px";
+  let totalFeat=0;
+  loaded.innerHTML=state.mains.map(m=>{
+    const s=statsOf(m.geojson); totalFeat+=s.total;
+    return `<div class="filecard">
       <span class="dot optic"></span>
-      <div class="meta"><div class="nm">${esc(state.main.name)}</div>
+      <div class="meta"><div class="nm">${esc(m.name)}</div>
         <div class="sub">${s.pts} pontos · ${s.lin} linhas · ${s.pol} áreas</div></div>
-      <button class="icon-btn" id="mainZoom" title="Enquadrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-      <button class="icon-btn danger" id="mainDel" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+      <button class="icon-btn" data-act="mzoom" data-id="${m.id}" title="Enquadrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="icon-btn danger" data-act="mdel" data-id="${m.id}" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
     </div>`;
-  $("mainZoom").onclick=()=>{ if(mainLayerGroup)map.fitBounds(mainLayerGroup.getBounds(),{padding:[40,40]}); };
-  $("mainDel").onclick=()=>{ if(!confirm("Remover a rede principal? As preventivas continuam.")) return; state.main=null; renderMain(); refresh(); };
+  }).join("");
+  tag.textContent=state.mains.length+" arquivo"+(state.mains.length>1?"s":"")+" · "+totalFeat+" feições";
+  loaded.querySelectorAll("[data-act='mzoom']").forEach(b=>b.onclick=()=>{ const lg=mainLayerGroups[b.dataset.id]; if(lg)map.fitBounds(lg.getBounds(),{padding:[40,40]}); });
+  loaded.querySelectorAll("[data-act='mdel']").forEach(b=>b.onclick=()=>{
+    if(!confirm("Remover este arquivo da rede principal?")) return;
+    state.mains=state.mains.filter(x=>x.id!==b.dataset.id);
+    renderMain(); refresh();
+  });
 }
 
 function renderPrevList(){
@@ -703,9 +711,9 @@ const find=id=>state.preventivas.find(p=>p.id===id);
 
 function refreshLegend(){
   const leg=$("legend"), items=$("legendItems");
-  if(!state.main && !state.preventivas.length){ leg.style.display="none"; return; }
+  if(!state.mains.length && !state.preventivas.length){ leg.style.display="none"; return; }
   leg.style.display=""; items.innerHTML="";
-  if(state.main) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#8fb7cc"></span><span>Rede principal</span></div>`;
+  if(state.mains.length) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#8fb7cc"></span><span>Rede principal</span></div>`;
   const anyCov=mainAssets.some(a=>a.covered);
   if(anyCov) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#34d399"></span><span>Ativo coberto</span></div>`;
   state.preventivas.forEach(p=>{ if(p.visible===false)return; items.innerHTML+=`<div class="lr"><span class="swatch" style="background:${p.color}"></span><span>${esc(p.name)}</span></div>`; });
@@ -716,17 +724,17 @@ function updateKpis(cov){
   $("prevTag").textContent=state.preventivas.length;
   let totM=0; state.preventivas.forEach(p=>totM+=lineLength(p.geojson));
   $("kpiDist").textContent = totM>0 ? fmtDist(totM) : "—";
-  if(state.main && cov.total){
+  if(state.mains.length && cov.total){
     $("kpiCov").textContent=Math.round(cov.covered/cov.total*100)+"%";
     $("kpiPend").textContent=(cov.total-cov.covered);
   } else { $("kpiCov").textContent="—"; $("kpiPend").textContent="—"; }
-  const has=state.main||state.preventivas.length;
+  const has=state.mains.length||state.preventivas.length;
   $("expKmz").disabled=!has; $("expCsv").disabled=!state.preventivas.length;
 }
 
 /* recalcula cobertura por preventiva (para a coluna "ativos cob.") */
 function coveragePerPrev(){
-  if(!state.main){ state.preventivas.forEach(p=>p._cov=null); return; }
+  if(!state.mains.length){ state.preventivas.forEach(p=>p._cov=null); return; }
   const radiusM=state.radius, cellDeg=Math.max(radiusM/111320,1e-5);
   state.preventivas.forEach(p=>{
     if(p.visible===false){p._cov="off";return;}
@@ -744,7 +752,7 @@ function coveragePerPrev(){
 }
 
 function refresh(){
-  renderMainCard();
+  renderMainList();
   const cov=computeCoverage();
   coveragePerPrev();
   renderPrevList();
@@ -754,7 +762,7 @@ function refresh(){
 }
 
 function fitAll(){
-  const groups=[]; if(mainLayerGroup)groups.push(mainLayerGroup);
+  const groups=[]; Object.values(mainLayerGroups).forEach(g=>groups.push(g));
   Object.values(prevLayerGroups).forEach(g=>{if(map.hasLayer(g))groups.push(g);});
   const withLayers=groups.filter(g=>g.getLayers().length);
   if(!withLayers.length) return;
@@ -763,12 +771,18 @@ function fitAll(){
 }
 
 /* ============ Uploads ============ */
-async function loadMain(file){
-  try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file);
-    state.main={name:file.name.replace(/\.(kmz|kml)$/i,""),geojson:gj,addedAt:Date.now()};
-    renderMain(); refresh(); if(mainLayerGroup)map.fitBounds(mainLayerGroup.getBounds(),{padding:[50,50]});
-    toast("Rede principal carregada.","ok");
-  }catch(e){ toast("Erro: "+e.message,"err"); }
+async function addMain(files){
+  let ok=0,fail=0;
+  for(const file of files){
+    try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file);
+      state.mains.push({id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),geojson:gj,addedAt:Date.now()});
+      ok++;
+    }catch(e){ fail++; console.warn(file.name,e); }
+  }
+  renderMain(); refresh(); fitAll();
+  if(ok&&!fail) toast(ok+" arquivo(s) de rede principal adicionado(s).","ok");
+  else if(ok&&fail) toast(ok+" adicionado(s), "+fail+" com erro.","err");
+  else toast("Falha ao ler o(s) arquivo(s).","err");
 }
 async function addPrev(files){
   let ok=0,fail=0;
@@ -793,7 +807,7 @@ function wireDrop(zone,input,handler){
   ["dragleave","drop"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove("hot");}));
   zone.addEventListener("drop",e=>{ if(e.dataTransfer.files.length)handler(e.dataTransfer.files); });
 }
-wireDrop($("dropMain"),$("fileMain"),f=>loadMain(f[0]));
+wireDrop($("dropMain"),$("fileMain"),f=>addMain(f));
 wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
 
 /* radius + highlight */
@@ -805,11 +819,12 @@ $("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventiv
 /* limpar */
 $("clearAll").onclick=()=>{
   if(!confirm("Limpar rede principal e todas as preventivas?")) return;
-  if(mainLayerGroup)map.removeLayer(mainLayerGroup);
+  Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
+  Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
   Object.values(prevLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(prevLayerGroups).forEach(k=>delete prevLayerGroups[k]);
-  state={main:null,preventivas:[],radius:state.radius,highlight:state.highlight};
-  mainLayerGroup=null; renderMain(); refresh(); localStorage.removeItem(LS_KEY);
+  state={mains:[],preventivas:[],radius:state.radius,highlight:state.highlight,showLabels:state.showLabels};
+  renderMain(); refresh(); localStorage.removeItem(LS_KEY);
   toast("Tudo limpo.","ok");
 };
 
@@ -820,8 +835,8 @@ function persist(){
   persistT=setTimeout(()=>{
     const badge=$("saveBadge");
     try{
-      const slim={v:2,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
-        main:state.main?{name:state.main.name,geojson:state.main.geojson,addedAt:state.main.addedAt}:null,
+      const slim={v:3,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
+        mains:state.mains.map(m=>({id:m.id,name:m.name,geojson:m.geojson,addedAt:m.addedAt})),
         preventivas:state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}))};
       localStorage.setItem(LS_KEY,JSON.stringify(slim));
       badge.innerHTML='<span class="dot done"></span>Sessão salva localmente';
@@ -836,12 +851,13 @@ function restore(){
     const d=JSON.parse(raw);
     state.radius=d.radius||50; state.highlight=d.highlight!==false; state.showLabels=d.showLabels!==false;
     $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m"; $("hl").checked=state.highlight; $("showLabels").checked=state.showLabels;
-    state.main=d.main||null; state.preventivas=d.preventivas||[];
+    state.mains = d.mains || (d.main ? [Object.assign({id:uid()}, d.main)] : []);
+    state.preventivas=d.preventivas||[];
     colorIx=state.preventivas.length;
     renderMain(); state.preventivas.forEach(renderPrev);
     refresh();
     setTimeout(fitAll,200);
-    if(state.main||state.preventivas.length) toast("Sessão anterior restaurada.","ok");
+    if(state.mains.length||state.preventivas.length) toast("Sessão anterior restaurada.","ok");
   }catch(e){ console.warn("restore",e); }
 }
 
@@ -877,7 +893,7 @@ function folderKml(name,styleId,gj){
 function buildKml(){
   let styles="", folders="";
   styles+='<Style id="sMain"><LineStyle><color>ff9cb27f</color><width>2</width></LineStyle><PolyStyle><color>309cb27f</color></PolyStyle><IconStyle><color>ffcc b78f</color></IconStyle></Style>';
-  if(state.main) folders+=folderKml("Rede principal — "+state.main.name,"sMain",state.main.geojson);
+  state.mains.forEach(m=>{ folders+=folderKml("Rede principal — "+m.name,"sMain",m.geojson); });
   state.preventivas.forEach((p,i)=>{
     const c=hexToKml(p.color);
     styles+='<Style id="sP'+i+'"><LineStyle><color>'+c+'</color><width>3</width></LineStyle><PolyStyle><color>'+("60"+c.slice(2))+'</color></PolyStyle><IconStyle><color>'+c+'</color></IconStyle></Style>';
