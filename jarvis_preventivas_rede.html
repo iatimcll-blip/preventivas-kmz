@@ -10,6 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
   :root{
@@ -109,7 +110,9 @@
   .icon-btn svg{width:15px;height:15px}
 
   /* preventiva rows */
-  .prev-list{display:flex;flex-direction:column;gap:8px}
+  .prev-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:4px}
+  .prev-list::-webkit-scrollbar{width:9px}
+  .prev-list::-webkit-scrollbar-thumb{background:#22323f;border-radius:9px;border:2px solid var(--panel-2)}
   .prev{border:1px solid var(--line);border-radius:9px;background:#0e1922;overflow:hidden}
   .prev.off{opacity:.5}
   .prev .top{display:flex;align-items:center;gap:9px;padding:9px 10px}
@@ -124,6 +127,10 @@
   .field input{background:#0a1219;border:1px solid var(--line);border-radius:6px;color:var(--ink);
     font:12px var(--mono);padding:5px 7px;outline:none;width:100%}
   .field input:focus{border-color:var(--optic)}
+  .field select{background:#0a1219;border:1px solid var(--line);border-radius:6px;color:var(--ink);
+    font:12px var(--sans);padding:6px 7px;outline:none;width:100%}
+  .field select:focus{border-color:var(--optic)}
+  .field select:disabled{opacity:.5;cursor:not-allowed}
   .mini{text-align:center;background:#0a1219;border:1px solid var(--line-soft);border-radius:6px;padding:4px 2px}
   .mini .v{font-family:var(--mono);font-size:13px;font-weight:600}
   .mini .k{font-size:8.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.4px}
@@ -191,13 +198,7 @@
     background:#0b141d;border:2px solid var(--pc);display:grid;place-items:center;box-shadow:0 2px 9px -2px #000}
   .photo-pin svg{width:13px;height:13px;transform:rotate(-45deg)}
 
-  /* pino de notificação Nort. Equatorial (em destaque) */
-  .notif-pin{width:30px;height:30px;border-radius:50% 50% 50% 3px;transform:rotate(45deg);
-    display:grid;place-items:center;box-shadow:0 2px 10px -2px #000;border:2px solid #fff}
-  .notif-pin svg{width:15px;height:15px;transform:rotate(-45deg);color:#fff}
-  .notif-pin.pending{background:var(--danger);animation:notifPulse 1.6s ease-in-out infinite}
-  .notif-pin.done{background:var(--done)}
-  @keyframes notifPulse{0%,100%{box-shadow:0 2px 10px -2px #000,0 0 0 0 #f8717166}50%{box-shadow:0 2px 10px -2px #000,0 0 0 9px #f8717100}}
+  /* notificação Nort. Equatorial: marcador é L.circleMarker (canvas), sem CSS próprio */
   .notif-pop .os{font-size:11px;color:var(--ink-3);margin:2px 0 6px}
   .notif-pop .chip{display:inline-block;font-size:10.5px;background:#2a1416;color:#ffb4b0;border:1px solid #4a1f20;
     border-radius:5px;padding:2px 6px;margin:2px 3px 0 0}
@@ -269,6 +270,14 @@
       <section class="block">
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
+          <button class="btn" id="btnPickFolder" style="margin-bottom:9px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
+            Selecionar pasta de KMZ principais
+          </button>
+          <div class="field" id="mainFolderRow" style="margin-bottom:11px">
+            <label>Arquivo por UF (pasta local)</label>
+            <select id="mainFolderSelect" disabled><option value="">Selecione a pasta acima…</option></select>
+          </div>
           <div class="drop" id="dropMain">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
             <div><b>Anexar KMZ principal</b></div>
@@ -369,6 +378,7 @@
 <input type="file" id="fileMain" accept=".kmz,.kml" multiple hidden>
 <input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
 <input type="file" id="fileNotif" accept=".xlsx" multiple hidden>
+<input type="file" id="folderMainPicker" webkitdirectory multiple hidden>
 <div id="lightbox"><img alt="Foto da preventiva"></div>
 <div id="toast"></div>
 
@@ -376,8 +386,9 @@
 "use strict";
 
 /* ============ Estado ============ */
-const LS_KEY = "jarvis_prev_rede_v2"; // chave legada (localStorage) — migrada para IndexedDB no primeiro carregamento
-const IDB_NAME = "jarvis_prev_rede_db", IDB_STORE = "kv";
+const SUPABASE_URL = "https://hhwghwqynrxrksrzjvgc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true };
 let colorIx = 0;
@@ -627,13 +638,11 @@ function renderPrev(p){
 }
 
 /* ============ Render — notificações Nort. Equatorial ============ */
-function notifIcon(status){
-  const done=status==="concluido";
-  return L.divIcon({className:"notif-pin-wrap",iconSize:[30,30],iconAnchor:[15,29],popupAnchor:[0,-26],
-    html:'<div class="notif-pin '+(done?"done":"pending")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
-      +(done?'<path d="M20 6L9 17l-5-5"/>':'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')
-      +'</svg></div>'});
-}
+/* Marcadores em L.circleMarker (canvas) em vez de L.marker/divIcon: nada de nó DOM
+   por marcador, o que importa muito quando há centenas/milhares de notificações.
+   A descrição (texto grande de irregularidades) só é buscada do Supabase quando o
+   popup é aberto pela primeira vez — o carregamento inicial da página só traz os
+   campos leves (posição, status, OS, município). */
 function fmtPlacemarkName(n){
   const s=String(n==null?"":n).trim();
   if(/^-?\d+(\.\d+)?e\+?\d+$/i.test(s)){ const num=Number(s); if(Number.isFinite(num)) return num.toFixed(0); }
@@ -650,26 +659,53 @@ function parseNotifDesc(desc){
   });
   return {servico,irregularidades};
 }
-function renderNotifMarker(n){
-  if(notifMarkers[n.id]){ notifLayerGroup.removeLayer(notifMarkers[n.id]); delete notifMarkers[n.id]; }
-  const m=L.marker([n.lat,n.lng],{icon:notifIcon(n.status)});
+function notifPopupHtml(n){
   const done=n.status==="concluido";
-  const {servico,irregularidades}=parseNotifDesc(n.description);
   const reg=fmtPlacemarkName(n.name);
   let html='<div class="notif-pop'+(done?" done":"")+'"><b>Nort. Equatorial</b>'
     +'<div class="os">OS: '+esc(n.os)+' • '+esc(n.municipio)+(reg?' • Reg. '+esc(reg):'')+'</div>';
-  if(servico) html+='<div>'+esc(servico)+'</div>';
-  if(irregularidades.length) html+='<div style="margin-top:4px">'+irregularidades.map(i=>'<span class="chip">'+esc(i)+'</span>').join("")+'</div>';
+  if(n.description==null){
+    html+='<div style="color:var(--ink-3);font-size:11.5px">Carregando detalhes…</div>';
+  }else{
+    const {servico,irregularidades}=parseNotifDesc(n.description);
+    if(servico) html+='<div>'+esc(servico)+'</div>';
+    if(irregularidades.length) html+='<div style="margin-top:4px">'+irregularidades.map(i=>'<span class="chip">'+esc(i)+'</span>').join("")+'</div>';
+  }
   html+='<button class="notif-btn'+(done?" done":"")+'" data-notif="'+n.id+'">'+(done?"↺ Reabrir":"✓ Marcar como concluído")+'</button></div>';
-  m.bindPopup(html,{maxWidth:270});
-  m.on("popupopen",e=>{
-    const el=e.popup.getElement(); if(!el) return;
-    const btn=el.querySelector("[data-notif]");
-    if(btn) btn.onclick=()=>{
-      n.status = n.status==="concluido" ? "pendente" : "concluido";
-      renderNotifMarker(n); refresh();
-      const nm=notifMarkers[n.id]; if(nm) nm.openPopup();
-    };
+  return html;
+}
+function wireNotifPopupBtn(m,n){
+  const el=m.getPopup()&&m.getPopup().getElement(); if(!el) return;
+  const btn=el.querySelector("[data-notif]");
+  if(btn) btn.onclick=()=>{
+    n.status = n.status==="concluido" ? "pendente" : "concluido";
+    const done=n.status==="concluido";
+    m.setStyle({fillColor:done?"#34d399":"#f87171",radius:done?5:6.5});
+    m.setPopupContent(notifPopupHtml(n));
+    wireNotifPopupBtn(m,n);
+    refresh();
+    sbCall(()=>sb.from('notifications').update({status:n.status}).eq('id',n.id), "Erro ao salvar status");
+  };
+}
+function renderNotifMarker(n){
+  if(notifMarkers[n.id]){ notifLayerGroup.removeLayer(notifMarkers[n.id]); delete notifMarkers[n.id]; }
+  const done=n.status==="concluido";
+  const m=L.circleMarker([n.lat,n.lng],{
+    renderer:canvas, radius:done?5:6.5, weight:1.6,
+    color:"#0b1219", fillColor:done?"#34d399":"#f87171", fillOpacity:0.95
+  });
+  m.bindPopup(notifPopupHtml(n),{maxWidth:270});
+  m.on("popupopen", async()=>{
+    wireNotifPopupBtn(m,n);
+    if(n.description==null){
+      try{
+        const {data,error}=await sb.from('notifications').select('name,description').eq('id',n.id).single();
+        if(!error&&data){ n.name=data.name; n.description=data.description; }
+      }catch(err){ console.warn("detalhe da notificação",err); }
+      if(n.description==null) n.description=""; // evita nova tentativa a cada abertura
+      m.setPopupContent(notifPopupHtml(n));
+      wireNotifPopupBtn(m,n);
+    }
   });
   notifMarkers[n.id]=m;
   notifLayerGroup.addLayer(m);
@@ -744,6 +780,7 @@ function renderMainList(){
     if(!confirm("Remover este arquivo da rede principal?")) return;
     state.mains=state.mains.filter(x=>x.id!==b.dataset.id);
     renderMain(); refresh();
+    sbCall(()=>sb.from('mains').delete().eq('id',b.dataset.id), "Erro ao remover rede principal");
   });
 }
 
@@ -788,16 +825,17 @@ function renderPrevList(){
     list.appendChild(el);
   });
 
-  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);persist();refreshLegend();}});
-  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p[e.target.dataset.field]=e.target.value;if(e.target.dataset.field==="date")renderPrev(p);persist();}});
+  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);refreshLegend();sbCall(()=>sb.from('preventivas').update({name:p.name}).eq('id',p.id),"Erro ao salvar nome");}});
+  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){const f=e.target.dataset.field;p[f]=e.target.value;if(f==="date")renderPrev(p);sbCall(()=>sb.from('preventivas').update({[f]:p[f]}).eq('id',p.id),"Erro ao salvar "+f);}});
   list.querySelectorAll("[data-act]").forEach(b=>b.onclick=e=>{
     const p=find(b.dataset.id); if(!p) return;
     const act=b.dataset.act;
-    if(act==="vis"){ p.visible=!(p.visible!==false); renderPrev(p); refresh(); }
+    if(act==="vis"){ p.visible=!(p.visible!==false); renderPrev(p); refresh(); sbCall(()=>sb.from('preventivas').update({visible:p.visible}).eq('id',p.id),"Erro ao salvar visibilidade"); }
     else if(act==="zoom"){ const lg=prevLayerGroups[p.id]; if(lg&&lg.getLayers().length){map.fitBounds(lg.getBounds(),{padding:[40,40]});} }
     else if(act==="del"){ if(!confirm("Remover a preventiva \""+p.name+"\"?")) return;
       if(prevLayerGroups[p.id]){map.removeLayer(prevLayerGroups[p.id]);delete prevLayerGroups[p.id];}
-      state.preventivas=state.preventivas.filter(x=>x.id!==p.id); refresh(); }
+      state.preventivas=state.preventivas.filter(x=>x.id!==p.id); refresh();
+      sbCall(()=>sb.from('preventivas').delete().eq('id',p.id),"Erro ao remover preventiva"); }
   });
 }
 const find=id=>state.preventivas.find(p=>p.id===id);
@@ -821,6 +859,7 @@ function renderNotifFileList(){
     state.notifications=state.notifications.filter(n=>n.fileId!==b.dataset.id);
     state.notifFiles=state.notifFiles.filter(x=>x.id!==b.dataset.id);
     renderAllNotifMarkers(); refresh();
+    sbCall(()=>sb.from('notif_files').delete().eq('id',b.dataset.id), "Erro ao remover planilha"); // cascade remove as notificações filhas
   });
 }
 function updateNotifStats(){
@@ -887,7 +926,6 @@ function refresh(){
   updateNotifStats();
   refreshLegend();
   updateKpis(cov);
-  persist();
 }
 
 function fitAll(){
@@ -905,7 +943,9 @@ async function addMain(files){
   let ok=0,fail=0;
   for(const file of files){
     try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file);
-      state.mains.push({id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),geojson:gj,addedAt:Date.now()});
+      const mo={id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),geojson:gj,addedAt:Date.now()};
+      state.mains.push(mo);
+      sbCall(()=>sb.from('mains').insert(mo), "Erro ao salvar rede principal");
       ok++;
     }catch(e){ fail++; console.warn(file.name,e); }
   }
@@ -921,6 +961,7 @@ async function addPrev(files){
       const p={id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),date:todayISO(),ga:"",color:COLORS[colorIx++%COLORS.length],visible:true,geojson:gj};
       processPhotos(p,images);
       state.preventivas.push(p); renderPrev(p); ok++;
+      sbCall(()=>sb.from('preventivas').insert(p), "Erro ao salvar preventiva");
     }catch(e){ fail++; console.warn(file.name,e); }
   }
   refresh();
@@ -963,6 +1004,7 @@ async function addNotif(files){
       const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,raw:false,defval:""});
       const fileId=uid();
       let count=0, failed=0, rowsProcessed=0;
+      const newNotifications=[];
       for(let i=1;i<rows.length;i++){
         const row=rows[i]; if(!row||!row.length) continue;
         const os=(row[0]||"").toString().trim();
@@ -974,12 +1016,18 @@ async function addNotif(files){
         try{
           const pts=await fetchMapPoints(link);
           pts.forEach(pt=>{
-            state.notifications.push({id:uid(),fileId,os,municipio,link,name:pt.name,description:pt.description,lat:pt.lat,lng:pt.lng,status:"pendente"});
+            const n={id:uid(),fileId,os,municipio,link,name:pt.name,description:pt.description,lat:pt.lat,lng:pt.lng,status:"pendente"};
+            state.notifications.push(n); newNotifications.push(n);
             count++;
           });
         }catch(e){ failed++; console.warn("link falhou",link,e); }
       }
-      state.notifFiles.push({id:fileId,name:file.name,rows:rowsProcessed,count,failed,addedAt:Date.now()});
+      const nf={id:fileId,name:file.name,rows:rowsProcessed,count,failed,addedAt:Date.now()};
+      state.notifFiles.push(nf);
+      await sbCall(()=>sb.from('notif_files').insert(nf), "Erro ao salvar arquivo de notificações");
+      for(const part of chunk(newNotifications,500)){
+        await sbCall(()=>sb.from('notifications').insert(part), "Erro ao salvar notificações");
+      }
       filesOk++;
     }catch(e){ filesFail++; console.warn(file.name,e); toast("Erro em "+file.name+": "+e.message,"err"); }
   }
@@ -1001,15 +1049,55 @@ wireDrop($("dropMain"),$("fileMain"),f=>addMain(f));
 wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
 wireDrop($("dropNotif"),$("fileNotif"),f=>addNotif(f));
 
+/* ============ Pasta local de KMZ principais, agrupada por UF ============ */
+let mainFolderFiles=[]; // File[] indexados pelo value de <option>
+$("btnPickFolder").onclick=()=>$("folderMainPicker").click();
+$("folderMainPicker").onchange=e=>{
+  const files=Array.from(e.target.files||[]).filter(f=>/\.(kmz|kml)$/i.test(f.name));
+  e.target.value="";
+  if(!files.length){ toast("Nenhum arquivo .kmz/.kml encontrado na pasta selecionada.","err"); return; }
+  mainFolderFiles=files;
+  const groups={};
+  files.forEach((f,i)=>{
+    const parts=(f.webkitRelativePath||f.name).split("/");
+    const uf=(parts.length>=3?parts[1]:parts[0]).trim().replace(/\s+/g," ");
+    (groups[uf]=groups[uf]||[]).push(i);
+  });
+  const sel=$("mainFolderSelect");
+  sel.innerHTML='<option value="">Selecione um arquivo…</option>'+
+    Object.keys(groups).sort((a,b)=>a.localeCompare(b,"pt-BR")).map(uf=>
+      "<optgroup label=\""+esc(uf)+"\">"+
+        groups[uf].map(i=>'<option value="'+i+'">'+esc(files[i].name)+"</option>").join("")+
+      "</optgroup>"
+    ).join("");
+  sel.disabled=false;
+  toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok");
+};
+$("mainFolderSelect").onchange=e=>{
+  const idx=e.target.value; if(idx==="") return;
+  const file=mainFolderFiles[idx];
+  if(file) replaceMain(file);
+};
+async function replaceMain(file){
+  Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
+  Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
+  const oldIds=state.mains.map(m=>m.id);
+  state.mains=[];
+  renderMain(); refresh();
+  if(oldIds.length) await sbCall(()=>sb.from('mains').delete().in('id',oldIds), "Erro ao substituir rede principal");
+  await addMain([file]);
+}
+
 /* radius + highlight */
 $("radius").oninput=e=>{ state.radius=+e.target.value; $("radiusVal").textContent=state.radius+" m"; };
-$("radius").onchange=()=>refresh();
-$("hl").onchange=e=>{ state.highlight=e.target.checked; refresh(); };
-$("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventivas.forEach(renderPrev); persist(); };
+function saveSettings(){ return sbCall(()=>sb.from('settings').upsert({id:1,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels}), "Erro ao salvar configurações"); }
+$("radius").onchange=()=>{ refresh(); saveSettings(); };
+$("hl").onchange=e=>{ state.highlight=e.target.checked; refresh(); saveSettings(); };
+$("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventivas.forEach(renderPrev); saveSettings(); };
 
 /* limpar */
-$("clearAll").onclick=()=>{
-  if(!confirm("Limpar rede principal, preventivas e notificações?")) return;
+$("clearAll").onclick=async()=>{
+  if(!confirm("Limpar rede principal, preventivas e notificações de TODOS OS DISPOSITIVOS? Esta ação não pode ser desfeita.")) return;
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
   Object.values(prevLayerGroups).forEach(g=>map.removeLayer(g));
@@ -1017,119 +1105,59 @@ $("clearAll").onclick=()=>{
   notifLayerGroup.clearLayers(); notifMarkers={};
   state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:state.radius,highlight:state.highlight,showLabels:state.showLabels};
   renderMain(); refresh();
-  localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_CORE_KEY); localStorage.removeItem(LS_NOTIF_KEY);
-  idbSet("core",null).catch(()=>{}); idbSet("notif",null).catch(()=>{});
+  await Promise.all([
+    sbCall(()=>sb.from('notifications').delete().not('id','is',null), "Erro ao limpar notificações"),
+    sbCall(()=>sb.from('notif_files').delete().not('id','is',null), "Erro ao limpar arquivos de notificações"),
+    sbCall(()=>sb.from('preventivas').delete().not('id','is',null), "Erro ao limpar preventivas"),
+    sbCall(()=>sb.from('mains').delete().not('id','is',null), "Erro ao limpar rede principal"),
+  ]);
   toast("Tudo limpo.","ok");
 };
 
-/* ============ Persistência ============ */
-/* Anexos só devem sumir se o usuário excluir explicitamente. Estratégia:
-   1) tenta IndexedDB (sem o teto de ~5MB do localStorage) com timeout — em
-      páginas abertas via file:// o Chrome pode nunca resolver a requisição,
-      então uma corrida contra um timeout evita travar o app;
-   2) se IndexedDB não responder a tempo, cai para localStorage — mas em DUAS
-      chaves independentes (rede/preventivas vs. notificações), para que um
-      excesso de dados de um lado nunca apague o outro. */
-const LS_CORE_KEY = "jarvis_prev_rede_v2_core", LS_NOTIF_KEY = "jarvis_prev_rede_v2_notif";
-function withTimeout(promise,ms){
-  return new Promise((resolve,reject)=>{
-    const t=setTimeout(()=>reject(new Error("timeout")),ms);
-    promise.then(v=>{clearTimeout(t);resolve(v);}, e=>{clearTimeout(t);reject(e);});
-  });
-}
-function idbOpen(){
-  return new Promise((resolve,reject)=>{
-    if(!window.indexedDB){ reject(new Error("IndexedDB indisponível")); return; }
-    const req=indexedDB.open(IDB_NAME,1);
-    req.onupgradeneeded=()=>{ if(!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE); };
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
-  });
-}
-async function idbSet(key,value){
-  const db=await idbOpen();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(IDB_STORE,"readwrite");
-    tx.objectStore(IDB_STORE).put(value,key);
-    tx.oncomplete=()=>resolve();
-    tx.onerror=()=>reject(tx.error);
-    tx.onabort=()=>reject(tx.error);
-  });
-}
-async function idbGet(key){
-  const db=await idbOpen();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(IDB_STORE,"readonly");
-    const req=tx.objectStore(IDB_STORE).get(key);
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
-  });
-}
-let useIDB=null; // null=ainda não detectado
-async function detectIDB(){
-  if(useIDB!==null) return useIDB;
-  try{ await withTimeout(idbSet("__probe__",1),1200); useIDB=true; }
-  catch(e){ useIDB=false; console.warn("IndexedDB indisponível/lenta — usando localStorage.",e); }
-  return useIDB;
-}
-async function kvSet(key,lsKey,value){
-  if(await detectIDB()){
-    try{ await withTimeout(idbSet(key,value),4000); return true; }
-    catch(e){ console.warn("idb set falhou, tentando localStorage",key,e); }
-  }
-  try{ localStorage.setItem(lsKey,JSON.stringify(value)); return true; }
-  catch(e){ console.warn("localStorage set falhou",lsKey,e); return false; }
-}
-async function kvGet(key,lsKey){
-  if(await detectIDB()){
-    try{ const v=await withTimeout(idbGet(key),4000); if(v!=null) return v; }
-    catch(e){ console.warn("idb get falhou, tentando localStorage",key,e); }
-  }
-  try{ const raw=localStorage.getItem(lsKey); return raw?JSON.parse(raw):null; }
-  catch(e){ console.warn("localStorage get falhou",lsKey,e); return null; }
-}
-
-let persistT=null;
-function persist(){
-  clearTimeout(persistT);
-  persistT=setTimeout(persistNow,400);
-}
-async function persistNow(){
-  const badge=$("saveBadge");
-  const core={v:5,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
-    mains:state.mains.map(m=>({id:m.id,name:m.name,geojson:m.geojson,addedAt:m.addedAt})),
-    preventivas:state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}))};
-  const notif={notifFiles:state.notifFiles, notifications:state.notifications};
-  const coreOk=await kvSet("core",LS_CORE_KEY,core);
-  const notifOk=await kvSet("notif",LS_NOTIF_KEY,notif);
-  if(coreOk&&notifOk) badge.innerHTML='<span class="dot done"></span>Sessão salva localmente';
-  else if(coreOk) badge.innerHTML='<span class="dot warn"></span>Rede/preventivas salvas — notificações não couberam no armazenamento local';
-  else badge.innerHTML='<span class="dot warn"></span>Falha ao salvar sessão localmente';
-}
-async function restore(){
+/* ============ Persistência (Supabase — compartilhado entre dispositivos) ============ */
+async function sbCall(fn, errMsg){
   try{
-    let core=await kvGet("core",LS_CORE_KEY);
-    let notif=await kvGet("notif",LS_NOTIF_KEY);
-    let usedLegacy=false;
-    if(!core && !notif){
-      const raw=localStorage.getItem(LS_KEY); // migração única de sessões salvas antes desta versão
-      if(raw){ const d=JSON.parse(raw); core=d; notif={notifFiles:d.notifFiles,notifications:d.notifications}; usedLegacy=true; }
-    }
-    if(!core && !notif) return;
-    const d=core||{};
-    state.radius=d.radius||50; state.highlight=d.highlight!==false; state.showLabels=d.showLabels!==false;
-    $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m"; $("hl").checked=state.highlight; $("showLabels").checked=state.showLabels;
-    state.mains = (d.mains) || (d.main ? [Object.assign({id:uid()}, d.main)] : []);
-    state.preventivas=d.preventivas||[];
-    state.notifFiles=(notif&&notif.notifFiles)||[];
-    state.notifications=(notif&&notif.notifications)||[];
-    colorIx=state.preventivas.length;
-    renderMain(); state.preventivas.forEach(renderPrev); renderAllNotifMarkers();
-    refresh();
-    setTimeout(fitAll,200);
-    if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Sessão anterior restaurada.","ok");
-    if(usedLegacy){ await persistNow(); localStorage.removeItem(LS_KEY); } // migra da chave antiga uma única vez
-  }catch(e){ console.warn("restore",e); }
+    const {error}=await fn();
+    if(error) throw error;
+    setSaveBadge(true);
+    return true;
+  }catch(e){
+    console.warn(errMsg,e);
+    toast((errMsg||"Erro ao salvar")+": "+e.message,"err");
+    setSaveBadge(false);
+    return false;
+  }
+}
+function setSaveBadge(ok){
+  $("saveBadge").innerHTML = ok
+    ? '<span class="dot done"></span>Sincronizado com Supabase'
+    : '<span class="dot warn"></span>Falha ao sincronizar — verifique sua conexão';
+}
+function chunk(arr,size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size)); return out; }
+
+async function loadAll(){
+  const [mainsRes,prevRes,filesRes,notifRes,settingsRes]=await Promise.all([
+    sb.from('mains').select('*').order('created_at'),
+    sb.from('preventivas').select('*').order('created_at'),
+    sb.from('notif_files').select('*').order('created_at'),
+    sb.from('notifications').select('id,fileId,os,municipio,lat,lng,status').order('created_at'),
+    sb.from('settings').select('*').eq('id',1).maybeSingle()
+  ]);
+  if(mainsRes.error||prevRes.error||filesRes.error||notifRes.error||settingsRes.error){
+    console.warn("loadAll",mainsRes.error||prevRes.error||filesRes.error||notifRes.error||settingsRes.error);
+    toast("Erro ao carregar dados do Supabase — verifique SUPABASE_URL/ANON_KEY.","err");
+    return;
+  }
+  state.mains=mainsRes.data||[]; state.preventivas=prevRes.data||[];
+  state.notifFiles=filesRes.data||[]; state.notifications=notifRes.data||[];
+  if(settingsRes.data){ state.radius=settingsRes.data.radius; state.highlight=settingsRes.data.highlight; state.showLabels=settingsRes.data.showLabels; }
+  colorIx=state.preventivas.length;
+  $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m";
+  $("hl").checked=state.highlight; $("showLabels").checked=state.showLabels;
+  renderMain(); state.preventivas.forEach(renderPrev); renderAllNotifMarkers();
+  refresh();
+  setTimeout(fitAll,200);
+  if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Dados carregados do Supabase.","ok");
 }
 
 /* ============ Exportação ============ */
@@ -1198,7 +1226,7 @@ $("expCsv").onclick=()=>{
 /* ============ Start ============ */
 $("lightbox").onclick=()=>$("lightbox").classList.remove("show");
 document.addEventListener("keydown",e=>{ if(e.key==="Escape")$("lightbox").classList.remove("show"); });
-restore();
+loadAll();
 setTimeout(()=>map.invalidateSize(),300);
 window.addEventListener("resize",()=>map.invalidateSize());
 </script>
