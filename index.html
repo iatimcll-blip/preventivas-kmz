@@ -270,13 +270,9 @@
       <section class="block">
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
-          <button class="btn" id="btnPickFolder" style="margin-bottom:9px">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/></svg>
-            Selecionar pasta de KMZ principais
-          </button>
           <div class="field" id="mainFolderRow" style="margin-bottom:11px">
-            <label>Arquivo por UF (pasta local)</label>
-            <select id="mainFolderSelect" disabled><option value="">Selecione a pasta acima…</option></select>
+            <label>Rede principal por UF — pasta D:\Preventiva_Rede\KMZ'S</label>
+            <select id="mainFolderSelect"><option value="">Clique para selecionar a pasta…</option></select>
           </div>
           <div class="drop" id="dropMain">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
@@ -358,6 +354,10 @@
           <button class="btn" id="clearAll">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
             Limpar tudo
+          </button>
+          <button class="btn" id="btnReload">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
+            ↻ Recarregar dados do servidor
           </button>
           <div class="save-badge" id="saveBadge"><span class="dot done"></span>Sessão salva localmente</div>
         </div>
@@ -1062,8 +1062,16 @@ wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
 wireDrop($("dropNotif"),$("fileNotif"),f=>addNotif(f));
 
 /* ============ Pasta local de KMZ principais, agrupada por UF ============ */
+/* Só a lista suspensa fica visível — no primeiro clique (antes de ter pasta
+   escolhida nesta sessão), intercepta a abertura nativa do <select> e abre o
+   seletor de pasta do Windows no lugar. Depois de escolhida, funciona como
+   uma lista suspensa normal. Nenhum navegador consegue reabrir a mesma pasta
+   sozinho a cada nova sessão sem essa interação — é uma restrição de
+   segurança do navegador, não uma limitação deste app. */
 let mainFolderFiles=[]; // File[] indexados pelo value de <option>
-$("btnPickFolder").onclick=()=>$("folderMainPicker").click();
+$("mainFolderSelect").addEventListener("mousedown",e=>{
+  if(!mainFolderFiles.length){ e.preventDefault(); $("folderMainPicker").click(); }
+});
 $("folderMainPicker").onchange=e=>{
   const files=Array.from(e.target.files||[]).filter(f=>/\.(kmz|kml)$/i.test(f.name));
   e.target.value="";
@@ -1082,7 +1090,6 @@ $("folderMainPicker").onchange=e=>{
         groups[uf].map(i=>'<option value="'+i+'">'+esc(files[i].name)+"</option>").join("")+
       "</optgroup>"
     ).join("");
-  sel.disabled=false;
   toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok");
 };
 $("mainFolderSelect").onchange=e=>{
@@ -1125,6 +1132,7 @@ $("clearAll").onclick=async()=>{
   ]);
   toast("Tudo limpo.","ok");
 };
+$("btnReload").onclick=()=>loadAll();
 
 /* ============ Persistência (Supabase — compartilhado entre dispositivos) ============ */
 async function sbCall(fn, errMsg){
@@ -1147,29 +1155,45 @@ function setSaveBadge(ok){
 }
 function chunk(arr,size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.push(arr.slice(i,i+size)); return out; }
 
-async function loadAll(){
-  const [mainsRes,prevRes,filesRes,notifRes,settingsRes]=await Promise.all([
-    sb.from('mains').select('*').order('created_at'),
-    sb.from('preventivas').select('*').order('created_at'),
-    sb.from('notif_files').select('*').order('created_at'),
-    sb.from('notifications').select('id,fileId,os,municipio,name,lat,lng,status').order('created_at'),
-    sb.from('settings').select('*').eq('id',1).maybeSingle()
-  ]);
-  if(mainsRes.error||prevRes.error||filesRes.error||notifRes.error||settingsRes.error){
-    console.warn("loadAll",mainsRes.error||prevRes.error||filesRes.error||notifRes.error||settingsRes.error);
-    toast("Erro ao carregar dados do Supabase — verifique SUPABASE_URL/ANON_KEY.","err");
-    return;
+/* Projetos Supabase no plano gratuito "acordam" devagar depois de ficarem pausados —
+   uma falha isolada e passageira numa consulta não pode apagar o que já estava
+   carregado. Cada tabela tenta de novo algumas vezes antes de desistir, e mesmo
+   se uma falhar de vez, as outras que deram certo continuam sendo exibidas. */
+async function withRetry(queryFn, tries, delayMs){
+  tries=tries||3; delayMs=delayMs||1500;
+  let res;
+  for(let i=0;i<tries;i++){
+    res=await queryFn();
+    if(!res.error) return res;
+    if(i<tries-1) await new Promise(r=>setTimeout(r,delayMs));
   }
-  state.mains=mainsRes.data||[]; state.preventivas=prevRes.data||[];
-  state.notifFiles=filesRes.data||[]; state.notifications=notifRes.data||[];
-  if(settingsRes.data){ state.radius=settingsRes.data.radius; state.highlight=settingsRes.data.highlight; state.showLabels=settingsRes.data.showLabels; }
+  return res;
+}
+async function loadAll(){
+  $("btnReload") && ($("btnReload").disabled=true);
+  const [mainsRes,prevRes,filesRes,notifRes,settingsRes]=await Promise.all([
+    withRetry(()=>sb.from('mains').select('*').order('created_at')),
+    withRetry(()=>sb.from('preventivas').select('*').order('created_at')),
+    withRetry(()=>sb.from('notif_files').select('*').order('created_at')),
+    withRetry(()=>sb.from('notifications').select('id,fileId,os,municipio,name,lat,lng,status').order('created_at')),
+    withRetry(()=>sb.from('settings').select('*').eq('id',1).maybeSingle())
+  ]);
+  const failed=[];
+  if(mainsRes.error){ failed.push("rede principal"); console.warn("loadAll mains",mainsRes.error); } else state.mains=mainsRes.data||[];
+  if(prevRes.error){ failed.push("preventivas"); console.warn("loadAll preventivas",prevRes.error); } else state.preventivas=prevRes.data||[];
+  if(filesRes.error){ failed.push("arquivos de notificações"); console.warn("loadAll notif_files",filesRes.error); } else state.notifFiles=filesRes.data||[];
+  if(notifRes.error){ failed.push("notificações"); console.warn("loadAll notifications",notifRes.error); } else state.notifications=notifRes.data||[];
+  if(settingsRes.error){ failed.push("configurações"); console.warn("loadAll settings",settingsRes.error); }
+  else if(settingsRes.data){ state.radius=settingsRes.data.radius; state.highlight=settingsRes.data.highlight; state.showLabels=settingsRes.data.showLabels; }
   colorIx=state.preventivas.length;
   $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m";
   $("hl").checked=state.highlight; $("showLabels").checked=state.showLabels;
   renderMain(); state.preventivas.forEach(renderPrev); renderAllNotifMarkers();
   refresh();
   setTimeout(fitAll,200);
-  if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Dados carregados do Supabase.","ok");
+  if(failed.length) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no rodapé) para tentar de novo.","err");
+  else if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Dados carregados do Supabase.","ok");
+  $("btnReload") && ($("btnReload").disabled=false);
 }
 
 /* ============ Exportação ============ */
