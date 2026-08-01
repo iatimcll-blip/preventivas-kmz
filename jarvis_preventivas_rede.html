@@ -699,8 +699,8 @@ function renderNotifMarker(n){
     wireNotifPopupBtn(m,n);
     if(n.description==null){
       try{
-        const {data,error}=await sb.from('notifications').select('name,description').eq('id',n.id).single();
-        if(!error&&data){ n.name=data.name; n.description=data.description; }
+        const {data,error}=await sb.from('notifications').select('description').eq('id',n.id).single();
+        if(!error&&data){ n.description=data.description; }
       }catch(err){ console.warn("detalhe da notificação",err); }
       if(n.description==null) n.description=""; // evita nova tentativa a cada abertura
       m.setPopupContent(notifPopupHtml(n));
@@ -991,8 +991,14 @@ async function fetchMapPoints(link){
   });
   return pts;
 }
+/* chave estável do ponto (OS da linha + id do poste dentro do link) — usada para
+   reconhecer o mesmo ponto entre reimportações da planilha, sem duplicar no mapa
+   e sem resetar quem já foi marcado como concluído. */
+function notifKey(os,name){ return os+"|"+name; }
+
 async function addNotif(files){
   if(typeof XLSX==="undefined"){ toast("Biblioteca de leitura de planilhas indisponível.","err"); return; }
+  const seen=new Set(state.notifications.map(n=>notifKey(n.os,n.name)));
   let filesOk=0, filesFail=0;
   for(const file of files){
     try{
@@ -1003,7 +1009,7 @@ async function addNotif(files){
       if(!sheetName) throw new Error("Aba MAPEAMENTO_POSTES não encontrada.");
       const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,raw:false,defval:""});
       const fileId=uid();
-      let count=0, failed=0, rowsProcessed=0;
+      let count=0, skipped=0, failed=0, rowsProcessed=0;
       const newNotifications=[];
       for(let i=1;i<rows.length;i++){
         const row=rows[i]; if(!row||!row.length) continue;
@@ -1016,6 +1022,9 @@ async function addNotif(files){
         try{
           const pts=await fetchMapPoints(link);
           pts.forEach(pt=>{
+            const key=notifKey(os,pt.name);
+            if(seen.has(key)){ skipped++; return; } // já existe (mantém status atual, ex.: concluído)
+            seen.add(key);
             const n={id:uid(),fileId,os,municipio,link,name:pt.name,description:pt.description,lat:pt.lat,lng:pt.lng,status:"pendente"};
             state.notifications.push(n); newNotifications.push(n);
             count++;
@@ -1024,11 +1033,14 @@ async function addNotif(files){
       }
       const nf={id:fileId,name:file.name,rows:rowsProcessed,count,failed,addedAt:Date.now()};
       state.notifFiles.push(nf);
-      await sbCall(()=>sb.from('notif_files').insert(nf), "Erro ao salvar arquivo de notificações");
-      for(const part of chunk(newNotifications,500)){
-        await sbCall(()=>sb.from('notifications').insert(part), "Erro ao salvar notificações");
+      if(newNotifications.length){
+        await sbCall(()=>sb.from('notif_files').insert(nf), "Erro ao salvar arquivo de notificações");
+        for(const part of chunk(newNotifications,500)){
+          await sbCall(()=>sb.from('notifications').insert(part), "Erro ao salvar notificações");
+        }
       }
       filesOk++;
+      if(skipped) toast(count+" ponto(s) novo(s), "+skipped+" já existente(s) mantido(s) (status preservado).","ok");
     }catch(e){ filesFail++; console.warn(file.name,e); toast("Erro em "+file.name+": "+e.message,"err"); }
   }
   renderAllNotifMarkers(); refresh(); fitAll();
@@ -1140,7 +1152,7 @@ async function loadAll(){
     sb.from('mains').select('*').order('created_at'),
     sb.from('preventivas').select('*').order('created_at'),
     sb.from('notif_files').select('*').order('created_at'),
-    sb.from('notifications').select('id,fileId,os,municipio,lat,lng,status').order('created_at'),
+    sb.from('notifications').select('id,fileId,os,municipio,name,lat,lng,status').order('created_at'),
     sb.from('settings').select('*').eq('id',1).maybeSingle()
   ]);
   if(mainsRes.error||prevRes.error||filesRes.error||notifRes.error||settingsRes.error){
