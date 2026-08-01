@@ -9,6 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 <style>
   :root{
@@ -189,6 +190,22 @@
   .photo-pin{width:26px;height:26px;border-radius:50% 50% 50% 3px;transform:rotate(45deg);
     background:#0b141d;border:2px solid var(--pc);display:grid;place-items:center;box-shadow:0 2px 9px -2px #000}
   .photo-pin svg{width:13px;height:13px;transform:rotate(-45deg)}
+
+  /* pino de notificação Nort. Equatorial (em destaque) */
+  .notif-pin{width:30px;height:30px;border-radius:50% 50% 50% 3px;transform:rotate(45deg);
+    display:grid;place-items:center;box-shadow:0 2px 10px -2px #000;border:2px solid #fff}
+  .notif-pin svg{width:15px;height:15px;transform:rotate(-45deg);color:#fff}
+  .notif-pin.pending{background:var(--danger);animation:notifPulse 1.6s ease-in-out infinite}
+  .notif-pin.done{background:var(--done)}
+  @keyframes notifPulse{0%,100%{box-shadow:0 2px 10px -2px #000,0 0 0 0 #f8717166}50%{box-shadow:0 2px 10px -2px #000,0 0 0 9px #f8717100}}
+  .notif-pop .os{font-size:11px;color:var(--ink-3);margin:2px 0 6px}
+  .notif-pop .chip{display:inline-block;font-size:10.5px;background:#2a1416;color:#ffb4b0;border:1px solid #4a1f20;
+    border-radius:5px;padding:2px 6px;margin:2px 3px 0 0}
+  .notif-pop.done .chip{background:#0c2a22;color:#9ce8cb;border-color:#134a37}
+  .notif-btn{margin-top:9px;width:100%;padding:8px;border-radius:8px;border:1px solid var(--line);
+    background:#13202a;color:var(--ink);font:600 12px var(--sans);cursor:pointer}
+  .notif-btn:hover{border-color:var(--optic)}
+  .notif-btn.done{background:#0e2a1e;border-color:#1c5c40;color:#8ff0c4}
   /* popup escuro + galeria */
   .leaflet-popup-content-wrapper{background:#0f1922;color:var(--ink);border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 44px -14px #000}
   .leaflet-popup-tip{background:#0f1922;border:1px solid var(--line)}
@@ -278,6 +295,24 @@
         </div>
       </section>
 
+      <!-- NORT. EQUATORIAL (notificações) -->
+      <section class="block">
+        <h2><span class="dot warn"></span>Nort. Equatorial <span class="tag" id="notifTag"></span></h2>
+        <div class="body">
+          <div class="drop" id="dropNotif" style="margin-bottom:11px">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+            <div><b>Anexar planilha de notificações</b></div>
+            <div class="hint">.xlsx com a aba MAPEAMENTO_POSTES — busca os links da Coluna C</div>
+          </div>
+          <div class="empty" id="notifEmpty" style="margin-top:11px">Nenhuma planilha de notificações anexada.</div>
+          <div id="notifLoaded" style="display:none;margin-top:11px"></div>
+          <div id="notifStats" style="display:none;margin-top:11px">
+            <div class="cov-head"><span class="pct" id="notifPct" style="color:var(--danger)">0%</span><span class="frac" id="notifFrac">0 / 0 concluídas</span></div>
+            <div class="bar"><i id="notifBar" style="width:0%;background:linear-gradient(90deg,var(--danger),var(--done))"></i></div>
+          </div>
+        </div>
+      </section>
+
       <!-- COBERTURA -->
       <section class="block" id="covBlock" style="display:none">
         <h2><span class="dot optic"></span>Compatibilização / Cobertura</h2>
@@ -333,6 +368,7 @@
 
 <input type="file" id="fileMain" accept=".kmz,.kml" multiple hidden>
 <input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
+<input type="file" id="fileNotif" accept=".xlsx" multiple hidden>
 <div id="lightbox"><img alt="Foto da preventiva"></div>
 <div id="toast"></div>
 
@@ -340,9 +376,10 @@
 "use strict";
 
 /* ============ Estado ============ */
-const LS_KEY = "jarvis_prev_rede_v2";
+const LS_KEY = "jarvis_prev_rede_v2"; // chave legada (localStorage) — migrada para IndexedDB no primeiro carregamento
+const IDB_NAME = "jarvis_prev_rede_db", IDB_STORE = "kv";
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
-let state = { mains:[], preventivas:[], radius:50, highlight:true, showLabels:true };
+let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true };
 let colorIx = 0;
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
@@ -402,6 +439,8 @@ document.getElementById("btnFit").onclick = fitAll;
 let mainPointMarkers=[], mainAssets=[];
 const mainLayerGroups = {}; // id -> L.geoJSON layer
 const prevLayerGroups = {}; // id -> L.layerGroup
+let notifMarkers = {}; // id -> L.marker
+const notifLayerGroup = L.featureGroup().addTo(map);
 
 /* ============ Utilidades ============ */
 const $=id=>document.getElementById(id);
@@ -587,6 +626,60 @@ function renderPrev(p){
   if(p.visible!==false) group.addTo(map);
 }
 
+/* ============ Render — notificações Nort. Equatorial ============ */
+function notifIcon(status){
+  const done=status==="concluido";
+  return L.divIcon({className:"notif-pin-wrap",iconSize:[30,30],iconAnchor:[15,29],popupAnchor:[0,-26],
+    html:'<div class="notif-pin '+(done?"done":"pending")+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+      +(done?'<path d="M20 6L9 17l-5-5"/>':'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9L2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')
+      +'</svg></div>'});
+}
+function fmtPlacemarkName(n){
+  const s=String(n==null?"":n).trim();
+  if(/^-?\d+(\.\d+)?e\+?\d+$/i.test(s)){ const num=Number(s); if(Number.isFinite(num)) return num.toFixed(0); }
+  return s;
+}
+function parseNotifDesc(desc){
+  const parts=String(desc||"").split(/<br\s*\/?>/i).map(s=>s.trim()).filter(Boolean);
+  let servico="", irregularidades=[];
+  parts.forEach(p=>{
+    const mS=p.match(/^Servi[cç]os?:\s*(.*)$/i);
+    const mI=p.match(/^Irregularidades:\s*(.*)$/i);
+    if(mS) servico=mS[1];
+    else if(mI) irregularidades=mI[1].split(";").map(s=>s.trim()).filter(Boolean);
+  });
+  return {servico,irregularidades};
+}
+function renderNotifMarker(n){
+  if(notifMarkers[n.id]){ notifLayerGroup.removeLayer(notifMarkers[n.id]); delete notifMarkers[n.id]; }
+  const m=L.marker([n.lat,n.lng],{icon:notifIcon(n.status)});
+  const done=n.status==="concluido";
+  const {servico,irregularidades}=parseNotifDesc(n.description);
+  const reg=fmtPlacemarkName(n.name);
+  let html='<div class="notif-pop'+(done?" done":"")+'"><b>Nort. Equatorial</b>'
+    +'<div class="os">OS: '+esc(n.os)+' • '+esc(n.municipio)+(reg?' • Reg. '+esc(reg):'')+'</div>';
+  if(servico) html+='<div>'+esc(servico)+'</div>';
+  if(irregularidades.length) html+='<div style="margin-top:4px">'+irregularidades.map(i=>'<span class="chip">'+esc(i)+'</span>').join("")+'</div>';
+  html+='<button class="notif-btn'+(done?" done":"")+'" data-notif="'+n.id+'">'+(done?"↺ Reabrir":"✓ Marcar como concluído")+'</button></div>';
+  m.bindPopup(html,{maxWidth:270});
+  m.on("popupopen",e=>{
+    const el=e.popup.getElement(); if(!el) return;
+    const btn=el.querySelector("[data-notif]");
+    if(btn) btn.onclick=()=>{
+      n.status = n.status==="concluido" ? "pendente" : "concluido";
+      renderNotifMarker(n); refresh();
+      const nm=notifMarkers[n.id]; if(nm) nm.openPopup();
+    };
+  });
+  notifMarkers[n.id]=m;
+  notifLayerGroup.addLayer(m);
+}
+function renderAllNotifMarkers(){
+  Object.values(notifMarkers).forEach(m=>notifLayerGroup.removeLayer(m));
+  notifMarkers={};
+  state.notifications.forEach(renderNotifMarker);
+}
+
 /* ============ Cobertura / compatibilização ============ */
 function computeCoverage(){
   const covBlock=$("covBlock");
@@ -709,14 +802,48 @@ function renderPrevList(){
 }
 const find=id=>state.preventivas.find(p=>p.id===id);
 
+function renderNotifFileList(){
+  const empty=$("notifEmpty"), loaded=$("notifLoaded"), tag=$("notifTag"), statsBox=$("notifStats");
+  if(!state.notifFiles.length){ empty.style.display=""; loaded.style.display="none"; statsBox.style.display="none"; tag.textContent=""; return; }
+  empty.style.display="none"; loaded.style.display="flex"; loaded.style.flexDirection="column"; loaded.style.gap="8px"; statsBox.style.display="";
+  loaded.innerHTML=state.notifFiles.map(f=>{
+    return `<div class="filecard">
+      <span class="dot warn"></span>
+      <div class="meta"><div class="nm">${esc(f.name)}</div>
+        <div class="sub">${f.rows} link(s) · ${f.count} notificaç${f.count===1?"ão":"ões"}${f.failed?" · "+f.failed+" com erro":""}</div></div>
+      <button class="icon-btn danger" data-act="ndel" data-id="${f.id}" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div>`;
+  }).join("");
+  const totalCount=state.notifications.length;
+  tag.textContent=state.notifFiles.length+" arquivo"+(state.notifFiles.length>1?"s":"")+" · "+totalCount+" notific"+(totalCount===1?"ação":"ações");
+  loaded.querySelectorAll("[data-act='ndel']").forEach(b=>b.onclick=()=>{
+    if(!confirm("Remover esta planilha e suas notificações do mapa?")) return;
+    state.notifications=state.notifications.filter(n=>n.fileId!==b.dataset.id);
+    state.notifFiles=state.notifFiles.filter(x=>x.id!==b.dataset.id);
+    renderAllNotifMarkers(); refresh();
+  });
+}
+function updateNotifStats(){
+  const total=state.notifications.length;
+  const done=state.notifications.filter(n=>n.status==="concluido").length;
+  const pct=total?Math.round(done/total*100):0;
+  $("notifPct").textContent=pct+"%";
+  $("notifFrac").textContent=done+" / "+total+" concluídas";
+  $("notifBar").style.width=pct+"%";
+}
+
 function refreshLegend(){
   const leg=$("legend"), items=$("legendItems");
-  if(!state.mains.length && !state.preventivas.length){ leg.style.display="none"; return; }
+  if(!state.mains.length && !state.preventivas.length && !state.notifications.length){ leg.style.display="none"; return; }
   leg.style.display=""; items.innerHTML="";
   if(state.mains.length) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#8fb7cc"></span><span>Rede principal</span></div>`;
   const anyCov=mainAssets.some(a=>a.covered);
   if(anyCov) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#34d399"></span><span>Ativo coberto</span></div>`;
   state.preventivas.forEach(p=>{ if(p.visible===false)return; items.innerHTML+=`<div class="lr"><span class="swatch" style="background:${p.color}"></span><span>${esc(p.name)}</span></div>`; });
+  if(state.notifications.length){
+    items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#f87171"></span><span>Nort. Equatorial — pendente</span></div>`;
+    if(state.notifications.some(n=>n.status==="concluido")) items.innerHTML+=`<div class="lr"><span class="swatch" style="background:#34d399"></span><span>Nort. Equatorial — concluído</span></div>`;
+  }
 }
 
 function updateKpis(cov){
@@ -756,6 +883,8 @@ function refresh(){
   const cov=computeCoverage();
   coveragePerPrev();
   renderPrevList();
+  renderNotifFileList();
+  updateNotifStats();
   refreshLegend();
   updateKpis(cov);
   persist();
@@ -764,6 +893,7 @@ function refresh(){
 function fitAll(){
   const groups=[]; Object.values(mainLayerGroups).forEach(g=>groups.push(g));
   Object.values(prevLayerGroups).forEach(g=>{if(map.hasLayer(g))groups.push(g);});
+  groups.push(notifLayerGroup);
   const withLayers=groups.filter(g=>g.getLayers().length);
   if(!withLayers.length) return;
   let b=withLayers[0].getBounds(); withLayers.slice(1).forEach(g=>b.extend(g.getBounds()));
@@ -799,6 +929,66 @@ async function addPrev(files){
   else toast("Falha ao ler o(s) arquivo(s).","err");
 }
 
+/* ============ Nort. Equatorial — planilha de notificações (Coluna C) ============ */
+async function fetchMapPoints(link){
+  let mid=null;
+  try{ mid=new URL(link).searchParams.get("mid"); }catch(_){}
+  if(!mid) throw new Error("Link sem parâmetro mid.");
+  const url="https://www.google.com/maps/d/kml?mid="+encodeURIComponent(mid)+"&forcekml=1";
+  const res=await fetch(url);
+  if(!res.ok) throw new Error("Falha ao buscar o mapa (HTTP "+res.status+").");
+  const kmlText=await res.text();
+  const dom=new DOMParser().parseFromString(kmlText,"text/xml");
+  if(dom.querySelector("parsererror")) throw new Error("KML inválido retornado pelo Google Maps.");
+  const gj=toGeoJSON.kml(dom);
+  const pts=[];
+  (gj.features||[]).forEach(f=>{
+    const g=f.geometry; if(!g) return;
+    const props=f.properties||{};
+    if(g.type==="Point") pts.push({lat:g.coordinates[1],lng:g.coordinates[0],name:props.name||"",description:props.description||""});
+    else if(g.type==="MultiPoint") g.coordinates.forEach(c=>pts.push({lat:c[1],lng:c[0],name:props.name||"",description:props.description||""}));
+  });
+  return pts;
+}
+async function addNotif(files){
+  if(typeof XLSX==="undefined"){ toast("Biblioteca de leitura de planilhas indisponível.","err"); return; }
+  let filesOk=0, filesFail=0;
+  for(const file of files){
+    try{
+      toast("Lendo "+file.name+"…");
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:"array"});
+      const sheetName=wb.SheetNames.find(n=>n.toLowerCase()==="mapeamento_postes") || wb.SheetNames.find(n=>/mapeamento.*postes/i.test(n));
+      if(!sheetName) throw new Error("Aba MAPEAMENTO_POSTES não encontrada.");
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,raw:false,defval:""});
+      const fileId=uid();
+      let count=0, failed=0, rowsProcessed=0;
+      for(let i=1;i<rows.length;i++){
+        const row=rows[i]; if(!row||!row.length) continue;
+        const os=(row[0]||"").toString().trim();
+        const municipio=(row[1]||"").toString().trim();
+        const link=(row[2]||"").toString().trim();
+        if(!link) continue;
+        rowsProcessed++;
+        toast("Buscando notificações — linha "+rowsProcessed+"…");
+        try{
+          const pts=await fetchMapPoints(link);
+          pts.forEach(pt=>{
+            state.notifications.push({id:uid(),fileId,os,municipio,link,name:pt.name,description:pt.description,lat:pt.lat,lng:pt.lng,status:"pendente"});
+            count++;
+          });
+        }catch(e){ failed++; console.warn("link falhou",link,e); }
+      }
+      state.notifFiles.push({id:fileId,name:file.name,rows:rowsProcessed,count,failed,addedAt:Date.now()});
+      filesOk++;
+    }catch(e){ filesFail++; console.warn(file.name,e); toast("Erro em "+file.name+": "+e.message,"err"); }
+  }
+  renderAllNotifMarkers(); refresh(); fitAll();
+  if(filesOk&&!filesFail) toast(filesOk+" planilha(s) processada(s).","ok");
+  else if(filesOk&&filesFail) toast(filesOk+" ok, "+filesFail+" com erro.","err");
+  else toast("Falha ao processar planilha(s).","err");
+}
+
 /* dropzones + inputs */
 function wireDrop(zone,input,handler){
   zone.onclick=()=>input.click();
@@ -809,6 +999,7 @@ function wireDrop(zone,input,handler){
 }
 wireDrop($("dropMain"),$("fileMain"),f=>addMain(f));
 wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
+wireDrop($("dropNotif"),$("fileNotif"),f=>addNotif(f));
 
 /* radius + highlight */
 $("radius").oninput=e=>{ state.radius=+e.target.value; $("radiusVal").textContent=state.radius+" m"; };
@@ -818,46 +1009,126 @@ $("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventiv
 
 /* limpar */
 $("clearAll").onclick=()=>{
-  if(!confirm("Limpar rede principal e todas as preventivas?")) return;
+  if(!confirm("Limpar rede principal, preventivas e notificações?")) return;
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
   Object.values(prevLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(prevLayerGroups).forEach(k=>delete prevLayerGroups[k]);
-  state={mains:[],preventivas:[],radius:state.radius,highlight:state.highlight,showLabels:state.showLabels};
-  renderMain(); refresh(); localStorage.removeItem(LS_KEY);
+  notifLayerGroup.clearLayers(); notifMarkers={};
+  state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:state.radius,highlight:state.highlight,showLabels:state.showLabels};
+  renderMain(); refresh();
+  localStorage.removeItem(LS_KEY); localStorage.removeItem(LS_CORE_KEY); localStorage.removeItem(LS_NOTIF_KEY);
+  idbSet("core",null).catch(()=>{}); idbSet("notif",null).catch(()=>{});
   toast("Tudo limpo.","ok");
 };
 
 /* ============ Persistência ============ */
+/* Anexos só devem sumir se o usuário excluir explicitamente. Estratégia:
+   1) tenta IndexedDB (sem o teto de ~5MB do localStorage) com timeout — em
+      páginas abertas via file:// o Chrome pode nunca resolver a requisição,
+      então uma corrida contra um timeout evita travar o app;
+   2) se IndexedDB não responder a tempo, cai para localStorage — mas em DUAS
+      chaves independentes (rede/preventivas vs. notificações), para que um
+      excesso de dados de um lado nunca apague o outro. */
+const LS_CORE_KEY = "jarvis_prev_rede_v2_core", LS_NOTIF_KEY = "jarvis_prev_rede_v2_notif";
+function withTimeout(promise,ms){
+  return new Promise((resolve,reject)=>{
+    const t=setTimeout(()=>reject(new Error("timeout")),ms);
+    promise.then(v=>{clearTimeout(t);resolve(v);}, e=>{clearTimeout(t);reject(e);});
+  });
+}
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    if(!window.indexedDB){ reject(new Error("IndexedDB indisponível")); return; }
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=()=>{ if(!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function idbSet(key,value){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,"readwrite");
+    tx.objectStore(IDB_STORE).put(value,key);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+    tx.onabort=()=>reject(tx.error);
+  });
+}
+async function idbGet(key){
+  const db=await idbOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,"readonly");
+    const req=tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+let useIDB=null; // null=ainda não detectado
+async function detectIDB(){
+  if(useIDB!==null) return useIDB;
+  try{ await withTimeout(idbSet("__probe__",1),1200); useIDB=true; }
+  catch(e){ useIDB=false; console.warn("IndexedDB indisponível/lenta — usando localStorage.",e); }
+  return useIDB;
+}
+async function kvSet(key,lsKey,value){
+  if(await detectIDB()){
+    try{ await withTimeout(idbSet(key,value),4000); return true; }
+    catch(e){ console.warn("idb set falhou, tentando localStorage",key,e); }
+  }
+  try{ localStorage.setItem(lsKey,JSON.stringify(value)); return true; }
+  catch(e){ console.warn("localStorage set falhou",lsKey,e); return false; }
+}
+async function kvGet(key,lsKey){
+  if(await detectIDB()){
+    try{ const v=await withTimeout(idbGet(key),4000); if(v!=null) return v; }
+    catch(e){ console.warn("idb get falhou, tentando localStorage",key,e); }
+  }
+  try{ const raw=localStorage.getItem(lsKey); return raw?JSON.parse(raw):null; }
+  catch(e){ console.warn("localStorage get falhou",lsKey,e); return null; }
+}
+
 let persistT=null;
 function persist(){
   clearTimeout(persistT);
-  persistT=setTimeout(()=>{
-    const badge=$("saveBadge");
-    try{
-      const slim={v:3,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
-        mains:state.mains.map(m=>({id:m.id,name:m.name,geojson:m.geojson,addedAt:m.addedAt})),
-        preventivas:state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}))};
-      localStorage.setItem(LS_KEY,JSON.stringify(slim));
-      badge.innerHTML='<span class="dot done"></span>Sessão salva localmente';
-    }catch(e){
-      badge.innerHTML='<span class="dot warn"></span>Dados grandes — sessão não salva (reanexe ao recarregar)';
-    }
-  },400);
+  persistT=setTimeout(persistNow,400);
 }
-function restore(){
+async function persistNow(){
+  const badge=$("saveBadge");
+  const core={v:5,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
+    mains:state.mains.map(m=>({id:m.id,name:m.name,geojson:m.geojson,addedAt:m.addedAt})),
+    preventivas:state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}))};
+  const notif={notifFiles:state.notifFiles, notifications:state.notifications};
+  const coreOk=await kvSet("core",LS_CORE_KEY,core);
+  const notifOk=await kvSet("notif",LS_NOTIF_KEY,notif);
+  if(coreOk&&notifOk) badge.innerHTML='<span class="dot done"></span>Sessão salva localmente';
+  else if(coreOk) badge.innerHTML='<span class="dot warn"></span>Rede/preventivas salvas — notificações não couberam no armazenamento local';
+  else badge.innerHTML='<span class="dot warn"></span>Falha ao salvar sessão localmente';
+}
+async function restore(){
   try{
-    const raw=localStorage.getItem(LS_KEY); if(!raw) return;
-    const d=JSON.parse(raw);
+    let core=await kvGet("core",LS_CORE_KEY);
+    let notif=await kvGet("notif",LS_NOTIF_KEY);
+    let usedLegacy=false;
+    if(!core && !notif){
+      const raw=localStorage.getItem(LS_KEY); // migração única de sessões salvas antes desta versão
+      if(raw){ const d=JSON.parse(raw); core=d; notif={notifFiles:d.notifFiles,notifications:d.notifications}; usedLegacy=true; }
+    }
+    if(!core && !notif) return;
+    const d=core||{};
     state.radius=d.radius||50; state.highlight=d.highlight!==false; state.showLabels=d.showLabels!==false;
     $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m"; $("hl").checked=state.highlight; $("showLabels").checked=state.showLabels;
-    state.mains = d.mains || (d.main ? [Object.assign({id:uid()}, d.main)] : []);
+    state.mains = (d.mains) || (d.main ? [Object.assign({id:uid()}, d.main)] : []);
     state.preventivas=d.preventivas||[];
+    state.notifFiles=(notif&&notif.notifFiles)||[];
+    state.notifications=(notif&&notif.notifications)||[];
     colorIx=state.preventivas.length;
-    renderMain(); state.preventivas.forEach(renderPrev);
+    renderMain(); state.preventivas.forEach(renderPrev); renderAllNotifMarkers();
     refresh();
     setTimeout(fitAll,200);
-    if(state.mains.length||state.preventivas.length) toast("Sessão anterior restaurada.","ok");
+    if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Sessão anterior restaurada.","ok");
+    if(usedLegacy){ await persistNow(); localStorage.removeItem(LS_KEY); } // migra da chave antiga uma única vez
   }catch(e){ console.warn("restore",e); }
 }
 
