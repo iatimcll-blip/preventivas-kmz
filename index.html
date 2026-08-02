@@ -305,8 +305,9 @@
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
           <div class="field" id="mainFolderRow" style="margin-bottom:11px">
-            <label>Rede principal por UF — pasta D:\Preventivas-KMZ\KMZ'S</label>
-            <select id="mainFolderSelect"><option value="">Clique para selecionar a pasta…</option></select>
+            <label>Rede principal por UF — pasta D:\Preventivas-KMZ\KMZ'S (Ctrl/Cmd+clique para selecionar vários)</label>
+            <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Clique aqui para selecionar a pasta…</option></select>
+            <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
           </div>
           <div class="drop" id="dropMain">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
@@ -1196,8 +1197,7 @@ function populateMainFolderSelect(files){
     (groups[uf]=groups[uf]||[]).push(i);
   });
   const sel=$("mainFolderSelect");
-  sel.innerHTML='<option value="">Selecione um arquivo…</option>'+
-    Object.keys(groups).sort((a,b)=>a.localeCompare(b,"pt-BR")).map(uf=>
+  sel.innerHTML=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"pt-BR")).map(uf=>
       "<optgroup label=\""+esc(uf)+"\">"+
         groups[uf].map(i=>'<option value="'+i+'">'+esc(files[i].name)+"</option>").join("")+
       "</optgroup>"
@@ -1234,19 +1234,20 @@ $("folderMainPicker").onchange=e=>{
   populateMainFolderSelect(files);
   toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok");
 };
-$("mainFolderSelect").onchange=e=>{
-  const idx=e.target.value; if(idx==="") return;
-  const file=mainFolderFiles[idx];
-  if(file) replaceMain(file);
+$("btnLoadSelectedMains").onclick=()=>{
+  const sel=$("mainFolderSelect");
+  const files=Array.from(sel.selectedOptions).map(o=>mainFolderFiles[o.value]).filter(Boolean);
+  if(!files.length){ toast("Selecione ao menos um arquivo na lista (Ctrl/Cmd+clique para vários).","err"); return; }
+  replaceMains(files);
 };
-async function replaceMain(file){
+async function replaceMains(files){
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
   const oldIds=state.mains.map(m=>m.id);
   state.mains=[];
   renderMain(); refresh();
   if(oldIds.length) await sbCall(()=>sb.from('mains').delete().in('id',oldIds), "Erro ao substituir rede principal");
-  await addMain([file]);
+  await addMain(files);
 }
 
 /* radius + highlight */
