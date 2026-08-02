@@ -281,6 +281,16 @@
           </div>
           <div class="empty" id="mainEmpty" style="margin-top:11px">Nenhum arquivo da rede principal anexado.</div>
           <div id="mainLoaded" style="display:none;margin-top:11px"></div>
+          <div class="field" style="margin-top:11px">
+            <label>Buscar CTO/CEO no mapa</label>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="assetSearch" placeholder="ex.: CTO-15" style="flex:1">
+              <button class="icon-btn" id="assetSearchBtn" title="Buscar" style="border:1px solid var(--line);flex:0 0 auto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              </button>
+            </div>
+            <div class="empty" id="assetSearchResult" style="display:none;margin-top:6px;text-align:left;padding:0"></div>
+          </div>
         </div>
       </section>
 
@@ -304,6 +314,7 @@
       <section class="block">
         <h2><span class="dot warn"></span>Nort. Equatorial <span class="tag" id="notifTag"></span></h2>
         <div class="body">
+          <label class="switch" style="margin:0 0 11px"><input type="checkbox" id="showNotif" checked><span class="track"></span>Mostrar notificações no mapa</label>
           <div class="drop" id="dropNotif" style="margin-bottom:11px">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
             <div><b>Anexar planilha de notificações</b></div>
@@ -392,7 +403,7 @@ const SUPABASE_URL = "https://hhwghwqynrxrksrzjvgc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
-let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true };
+let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
@@ -525,7 +536,8 @@ function lineLength(gj){
 function fmtDist(m){ return m>=1000 ? (m/1000).toFixed(2).replace(".",",")+" km" : Math.round(m)+" m"; }
 
 /* ============ Leitura de KMZ / KML ============ */
-async function readGeo(file){
+async function readGeo(file,opts){
+  const wantImages=!opts||opts.images!==false; // rede principal não usa fotos: pula a extração pra carregar mais rápido
   const lower=file.name.toLowerCase();
   let kmlText, images={};
   if(lower.endsWith(".kml")){
@@ -537,16 +549,18 @@ async function readGeo(file){
     zip.forEach((p,e)=>{ if(!entry && p.toLowerCase().endsWith(".kml")) entry=e; });
     if(!entry) throw new Error("Nenhum .kml encontrado dentro do KMZ.");
     kmlText=await entry.async("string");
-    // extrai imagens embutidas -> data URI
-    const jobs=[];
-    zip.forEach((path,e)=>{
-      const mt=(path.match(/\.(jpe?g|png|gif|webp|bmp)$/i)||[])[1];
-      if(mt && !e.dir){ jobs.push(e.async("base64").then(b64=>{
-        const ext=mt.toLowerCase(); const mime = ext==="jpg"?"jpeg":ext;
-        images[path]="data:image/"+mime+";base64,"+b64;
-      })); }
-    });
-    await Promise.all(jobs);
+    if(wantImages){
+      // extrai imagens embutidas -> data URI
+      const jobs=[];
+      zip.forEach((path,e)=>{
+        const mt=(path.match(/\.(jpe?g|png|gif|webp|bmp)$/i)||[])[1];
+        if(mt && !e.dir){ jobs.push(e.async("base64").then(b64=>{
+          const ext=mt.toLowerCase(); const mime = ext==="jpg"?"jpeg":ext;
+          images[path]="data:image/"+mime+";base64,"+b64;
+        })); }
+      });
+      await Promise.all(jobs);
+    }
   }
   if(typeof toGeoJSON==="undefined") throw new Error("Conversor KML indisponível.");
   const dom=new DOMParser().parseFromString(kmlText,"text/xml");
@@ -571,6 +585,7 @@ function renderMainOne(mo){
       const m=L.circleMarker(ll,{renderer:canvas,radius:4,weight:1.4,color:"#0b1219",fillColor:"#8fb7cc",fillOpacity:0.95});
       m._asset={lat:ll.lat,lng:ll.lng};
       m._assetType=classifyAssetType(nm);
+      m._name=nm;
       mainPointMarkers.push(m);
       return m;
     },
@@ -771,6 +786,28 @@ function computeCoverage(){
   return {covered,total};
 }
 
+/* ============ Buscador de CTO/CEO ============ */
+function searchAssets(term){
+  term=(term||"").trim().toUpperCase();
+  const box=$("assetSearchResult");
+  if(!term){ box.style.display=""; box.textContent="Digite um nome pra buscar (ex.: CTO-15)."; return; }
+  const matches=mainPointMarkers.filter(m=>(m._name||"").toUpperCase().includes(term));
+  if(!matches.length){ box.style.display=""; box.textContent="Nenhum ativo encontrado com \""+term+"\"."; return; }
+  box.style.display=""; box.textContent=matches.length+" encontrado(s).";
+  let changedVisibility=false;
+  matches.forEach(m=>{
+    if(m._assetType==="CTO"&&!state.showCTO){ state.showCTO=true; $("showCTO").checked=true; changedVisibility=true; }
+    if(m._assetType==="CEO"&&!state.showCEO){ state.showCEO=true; $("showCEO").checked=true; changedVisibility=true; }
+  });
+  if(changedVisibility){ refresh(); saveSettings(); }
+  if(matches.length===1){ map.setView(matches[0].getLatLng(),Math.max(map.getZoom(),18)); matches[0].openPopup(); }
+  else{ map.fitBounds(L.latLngBounds(matches.map(m=>m.getLatLng())),{padding:[60,60]}); }
+  matches.forEach(m=>m.setStyle({radius:10,fillColor:"#facc15",color:"#78350f"}));
+  setTimeout(()=>refresh(),2200); // volta ao estilo normal (cobertura/tipo) após o destaque
+}
+$("assetSearchBtn").onclick=()=>searchAssets($("assetSearch").value);
+$("assetSearch").addEventListener("keydown",e=>{ if(e.key==="Enter") searchAssets(e.target.value); });
+
 /* ============ Sidebar / KPIs ============ */
 function renderMainList(){
   const empty=$("mainEmpty"), loaded=$("mainLoaded"), tag=$("mainTag");
@@ -955,7 +992,7 @@ function fitAll(){
 async function addMain(files){
   let ok=0,fail=0;
   for(const file of files){
-    try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file);
+    try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file,{images:false});
       const mo={id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),geojson:gj,addedAt:Date.now()};
       state.mains.push(mo);
       sbCall(()=>sb.from('mains').insert(mo), "Erro ao salvar rede principal");
@@ -1075,20 +1112,57 @@ wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
 wireDrop($("dropNotif"),$("fileNotif"),f=>addNotif(f));
 
 /* ============ Pasta local de KMZ principais, agrupada por UF ============ */
-/* Só a lista suspensa fica visível — no primeiro clique (antes de ter pasta
-   escolhida nesta sessão), intercepta a abertura nativa do <select> e abre o
-   seletor de pasta do Windows no lugar. Depois de escolhida, funciona como
-   uma lista suspensa normal. Nenhum navegador consegue reabrir a mesma pasta
-   sozinho a cada nova sessão sem essa interação — é uma restrição de
-   segurança do navegador, não uma limitação deste app. */
+/* Só a lista suspensa fica visível. Em Chrome/Edge usamos a File System
+   Access API e guardamos a permissão da pasta (IndexedDB) entre aberturas —
+   depois da primeira vez, a lista já vem populada sozinha, sem clique nenhum.
+   Em navegadores sem essa API (ex.: Firefox) cai para o seletor de pasta
+   clássico, que precisa ser reaberto a cada sessão. Nenhum navegador
+   consegue ler uma pasta do disco sem alguma autorização explícita do
+   usuário — é restrição de segurança de qualquer navegador, não deste app. */
 let mainFolderFiles=[]; // File[] indexados pelo value de <option>
-$("mainFolderSelect").addEventListener("mousedown",e=>{
-  if(!mainFolderFiles.length){ e.preventDefault(); $("folderMainPicker").click(); }
-});
-$("folderMainPicker").onchange=e=>{
-  const files=Array.from(e.target.files||[]).filter(f=>/\.(kmz|kml)$/i.test(f.name));
-  e.target.value="";
-  if(!files.length){ toast("Nenhum arquivo .kmz/.kml encontrado na pasta selecionada.","err"); return; }
+const DIRH_DB="jarvis_dirhandle_db", DIRH_STORE="handles", DIRH_KEY="mainKmzFolder";
+function dirhOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DIRH_DB,1);
+    req.onupgradeneeded=()=>{ if(!req.result.objectStoreNames.contains(DIRH_STORE)) req.result.createObjectStore(DIRH_STORE); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function dirhSave(handle){
+  const db=await dirhOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(DIRH_STORE,"readwrite");
+    tx.objectStore(DIRH_STORE).put(handle,DIRH_KEY);
+    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
+  });
+}
+async function dirhLoad(){
+  const db=await dirhOpen();
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(DIRH_STORE,"readonly");
+    const req=tx.objectStore(DIRH_STORE).get(DIRH_KEY);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function collectFilesFromHandle(dirHandle,prefix){
+  prefix=prefix||dirHandle.name;
+  const out=[];
+  for await (const [name,handle] of dirHandle.entries()){
+    if(handle.kind==="file"){
+      if(/\.(kmz|kml)$/i.test(name)){
+        const file=await handle.getFile();
+        file.webkitRelativePath=prefix+"/"+name;
+        out.push(file);
+      }
+    }else if(handle.kind==="directory"){
+      out.push(...await collectFilesFromHandle(handle,prefix+"/"+name));
+    }
+  }
+  return out;
+}
+function populateMainFolderSelect(files){
   mainFolderFiles=files;
   const groups={};
   files.forEach((f,i)=>{
@@ -1103,6 +1177,36 @@ $("folderMainPicker").onchange=e=>{
         groups[uf].map(i=>'<option value="'+i+'">'+esc(files[i].name)+"</option>").join("")+
       "</optgroup>"
     ).join("");
+}
+async function tryRestoreMainFolder(){
+  if(!("showDirectoryPicker" in window)) return;
+  try{
+    const handle=await dirhLoad(); if(!handle) return;
+    if((await handle.queryPermission({mode:"read"}))!=="granted") return; // precisa de clique p/ reconfirmar
+    const files=await collectFilesFromHandle(handle);
+    if(files.length) populateMainFolderSelect(files);
+  }catch(e){ console.warn("restaurar pasta de KMZ",e); }
+}
+$("mainFolderSelect").addEventListener("mousedown",async e=>{
+  if(mainFolderFiles.length) return; // já carregada, comporta-se como lista normal
+  e.preventDefault();
+  if("showDirectoryPicker" in window){
+    try{
+      const handle=await window.showDirectoryPicker({id:"mainKmzFolder",mode:"read"});
+      await dirhSave(handle);
+      const files=await collectFilesFromHandle(handle);
+      if(files.length){ populateMainFolderSelect(files); toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok"); }
+      else toast("Nenhum arquivo .kmz/.kml encontrado na pasta selecionada.","err");
+    }catch(err){ if(err.name!=="AbortError") console.warn("selecionar pasta",err); }
+  }else{
+    $("folderMainPicker").click(); // navegador sem File System Access API
+  }
+});
+$("folderMainPicker").onchange=e=>{
+  const files=Array.from(e.target.files||[]).filter(f=>/\.(kmz|kml)$/i.test(f.name));
+  e.target.value="";
+  if(!files.length){ toast("Nenhum arquivo .kmz/.kml encontrado na pasta selecionada.","err"); return; }
+  populateMainFolderSelect(files);
   toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok");
 };
 $("mainFolderSelect").onchange=e=>{
@@ -1122,12 +1226,20 @@ async function replaceMain(file){
 
 /* radius + highlight */
 $("radius").oninput=e=>{ state.radius=+e.target.value; $("radiusVal").textContent=state.radius+" m"; };
-function saveSettings(){ return sbCall(()=>sb.from('settings').upsert({id:1,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels}), "Erro ao salvar configurações"); }
+function saveSettings(){
+  return sbCall(()=>sb.from('settings').upsert({id:1,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
+    showCTO:state.showCTO,showCEO:state.showCEO,showNotifications:state.showNotifications}), "Erro ao salvar configurações");
+}
 $("radius").onchange=()=>{ refresh(); saveSettings(); };
 $("hl").onchange=e=>{ state.highlight=e.target.checked; refresh(); saveSettings(); };
 $("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventivas.forEach(renderPrev); saveSettings(); };
-$("showCTO").onchange=e=>{ state.showCTO=e.target.checked; refresh(); };
-$("showCEO").onchange=e=>{ state.showCEO=e.target.checked; refresh(); };
+$("showCTO").onchange=e=>{ state.showCTO=e.target.checked; refresh(); saveSettings(); };
+$("showCEO").onchange=e=>{ state.showCEO=e.target.checked; refresh(); saveSettings(); };
+$("showNotif").onchange=e=>{
+  state.showNotifications=e.target.checked;
+  if(state.showNotifications) notifLayerGroup.addTo(map); else map.removeLayer(notifLayerGroup);
+  saveSettings();
+};
 
 /* limpar */
 $("clearAll").onclick=async()=>{
@@ -1199,11 +1311,17 @@ async function loadAll(){
   if(filesRes.error){ failed.push("arquivos de notificações"); console.warn("loadAll notif_files",filesRes.error); } else state.notifFiles=filesRes.data||[];
   if(notifRes.error){ failed.push("notificações"); console.warn("loadAll notifications",notifRes.error); } else state.notifications=notifRes.data||[];
   if(settingsRes.error){ failed.push("configurações"); console.warn("loadAll settings",settingsRes.error); }
-  else if(settingsRes.data){ state.radius=settingsRes.data.radius; state.highlight=settingsRes.data.highlight; state.showLabels=settingsRes.data.showLabels; }
+  else if(settingsRes.data){
+    const d=settingsRes.data;
+    state.radius=d.radius; state.highlight=d.highlight; state.showLabels=d.showLabels;
+    state.showCTO=d.showCTO!==false; state.showCEO=d.showCEO!==false; state.showNotifications=d.showNotifications!==false;
+  }
   colorIx=state.preventivas.length;
   $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m";
   $("hl").checked=state.highlight; $("showLabels").checked=state.showLabels;
+  $("showCTO").checked=state.showCTO; $("showCEO").checked=state.showCEO; $("showNotif").checked=state.showNotifications;
   renderMain(); state.preventivas.forEach(renderPrev); renderAllNotifMarkers();
+  if(state.showNotifications) notifLayerGroup.addTo(map); else map.removeLayer(notifLayerGroup);
   refresh();
   setTimeout(fitAll,200);
   if(failed.length) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no rodapé) para tentar de novo.","err");
@@ -1278,6 +1396,7 @@ $("expCsv").onclick=()=>{
 $("lightbox").onclick=()=>$("lightbox").classList.remove("show");
 document.addEventListener("keydown",e=>{ if(e.key==="Escape")$("lightbox").classList.remove("show"); });
 loadAll();
+tryRestoreMainFolder();
 setTimeout(()=>map.invalidateSize(),300);
 window.addEventListener("resize",()=>map.invalidateSize());
 </script>
