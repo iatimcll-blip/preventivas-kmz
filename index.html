@@ -305,7 +305,7 @@
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
           <div class="field" id="mainFolderRow" style="margin-bottom:11px">
-            <label>Rede principal por UF — pasta D:\Preventivas-KMZ\KMZ'S (Ctrl/Cmd+clique para selecionar vários)</label>
+            <label id="mainFolderLabel">Rede principal por UF — pasta D:\Preventivas-KMZ\KMZ'S (Ctrl/Cmd+clique para selecionar vários)</label>
             <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Clique aqui para selecionar a pasta…</option></select>
             <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
           </div>
@@ -1204,7 +1204,13 @@ function populateMainFolderSelect(files){
     ).join("");
 }
 async function tryRestoreMainFolder(){
-  if(!("showDirectoryPicker" in window)) return;
+  if(!("showDirectoryPicker" in window)){
+    // file:// (arquivo aberto direto) ou navegador sem File System Access API:
+    // nunca dá pra lembrar a pasta entre sessões — avisa isso na própria tela.
+    const lbl=$("mainFolderLabel");
+    if(lbl) lbl.innerHTML='Rede principal por UF — <b style="color:var(--warn)">abra pelo link publicado (https) pra não precisar selecionar a pasta toda vez</b>';
+    return;
+  }
   try{
     const handle=await dirhLoad(); if(!handle) return;
     if((await handle.queryPermission({mode:"read"}))!=="granted") return; // precisa de clique p/ reconfirmar
