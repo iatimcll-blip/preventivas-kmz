@@ -779,11 +779,15 @@ function computeCoverage(){
   });
 
   // recolorir marcadores principais
+  // índice O(1) por coordenada em vez de mainAssets.find() (O(n) por marcador —
+  // com milhares de pontos isso virava O(n²) e travava a aba por vários segundos)
+  const assetByCoord=new Map();
+  mainAssets.forEach(a=>assetByCoord.set(a.lat+","+a.lng,a));
   const hl=state.highlight;
   mainPointMarkers.forEach(m=>{
     const hidden=(m._assetType==="CTO"&&!state.showCTO)||(m._assetType==="CEO"&&!state.showCEO);
     if(hidden){ m.setStyle({radius:0,opacity:0,fillOpacity:0}); return; }
-    const as=mainAssets.find(x=>x.lat===m._asset.lat&&x.lng===m._asset.lng);
+    const as=assetByCoord.get(m._asset.lat+","+m._asset.lng);
     const done=hl&&as&&as.covered;
     m.setStyle({fillColor:done?"#34d399":"#8fb7cc",color:done?"#08351f":"#0b1219",radius:done?5:4,opacity:1,fillOpacity:0.95});
   });
