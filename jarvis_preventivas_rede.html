@@ -1429,6 +1429,18 @@ loadAll();
 loadMainFolderFromCloud();
 setTimeout(()=>map.invalidateSize(),300);
 window.addEventListener("resize",()=>map.invalidateSize());
+/* Alguns Windows/Chrome deixam uma faixa da página sem repintar depois de
+   restaurar/mover/trocar de monitor a janela (bug do compositor do navegador,
+   não da página). Força um reflow completo + reajusta o mapa nesses gatilhos,
+   o que costuma "desempenar" esse tipo de tela preta remanescente. */
+function forceReflow(){
+  document.body.style.display="none";
+  void document.body.offsetHeight; // força o navegador a aplicar antes de reverter
+  document.body.style.display="";
+  map.invalidateSize();
+}
+window.addEventListener("focus",forceReflow);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) forceReflow(); });
 </script>
 </body>
 </html>
