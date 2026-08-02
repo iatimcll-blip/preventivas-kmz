@@ -1223,12 +1223,26 @@ $("mainFolderSelect").addEventListener("mousedown",async e=>{
   e.preventDefault();
   if("showDirectoryPicker" in window){
     try{
-      const handle=await window.showDirectoryPicker({id:"mainKmzFolder",mode:"read"});
-      await dirhSave(handle);
+      // Se já tem uma pasta salva de uma vez anterior, reaproveita: o Chrome pode ter
+      // "esquecido" a permissão depois de reiniciar (isso é normal, não dura pra sempre),
+      // mas requestPermission() nesse handle já salvo só mostra uma confirmação rápida
+      // ("Permitir acesso a esta pasta?") em vez de reabrir o navegador de pastas do zero.
+      let handle=await dirhLoad();
+      if(handle){
+        const perm=await handle.requestPermission({mode:"read"});
+        if(perm!=="granted") throw {name:"NotAllowedError"};
+      }else{
+        handle=await window.showDirectoryPicker({id:"mainKmzFolder",mode:"read"});
+        await dirhSave(handle);
+      }
       const files=await collectFilesFromHandle(handle);
       if(files.length){ populateMainFolderSelect(files); toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok"); }
       else toast("Nenhum arquivo .kmz/.kml encontrado na pasta selecionada.","err");
-    }catch(err){ if(err.name!=="AbortError") console.warn("selecionar pasta",err); }
+    }catch(err){
+      if(err.name==="AbortError"){ /* usuário cancelou, nada a fazer */ }
+      else if(err.name==="NotAllowedError"){ toast("Permissão negada para a pasta.","err"); }
+      else console.warn("selecionar pasta",err);
+    }
   }else{
     $("folderMainPicker").click(); // navegador sem File System Access API
   }
