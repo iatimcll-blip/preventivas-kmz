@@ -305,8 +305,8 @@
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
           <div class="field" id="mainFolderRow" style="margin-bottom:11px">
-            <label id="mainFolderLabel">Rede principal por UF — pasta D:\Preventivas-KMZ\KMZ'S (Ctrl/Cmd+clique para selecionar vários)</label>
-            <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Clique aqui para selecionar a pasta…</option></select>
+            <label id="mainFolderLabel">Rede principal por UF — arquivos na nuvem (Ctrl/Cmd+clique para selecionar vários)</label>
+            <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Carregando lista…</option></select>
             <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
           </div>
           <div class="drop" id="dropMain">
@@ -401,9 +401,7 @@
 
 <input type="file" id="fileMain" accept=".kmz,.kml" multiple hidden>
 <input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
-<input type="file" id="fileNotif" accept=".xlsx" multiple hidden>
-<input type="file" id="folderMainPicker" webkitdirectory multiple hidden>
-<div id="lightbox"><img alt="Foto da preventiva"></div>
+<input type="file" id="fileNotif" accept=".xlsx" multiple hidden><div id="lightbox"><img alt="Foto da preventiva"></div>
 <div id="toast"></div>
 
 <script>
@@ -1137,128 +1135,61 @@ wireDrop($("dropMain"),$("fileMain"),f=>addMain(f));
 wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
 wireDrop($("dropNotif"),$("fileNotif"),f=>addNotif(f));
 
-/* ============ Pasta local de KMZ principais, agrupada por UF ============ */
-/* Só a lista suspensa fica visível. Em Chrome/Edge usamos a File System
-   Access API e guardamos a permissão da pasta (IndexedDB) entre aberturas —
-   depois da primeira vez, a lista já vem populada sozinha, sem clique nenhum.
-   Em navegadores sem essa API (ex.: Firefox) cai para o seletor de pasta
-   clássico, que precisa ser reaberto a cada sessão. Nenhum navegador
-   consegue ler uma pasta do disco sem alguma autorização explícita do
-   usuário — é restrição de segurança de qualquer navegador, não deste app. */
-let mainFolderFiles=[]; // File[] indexados pelo value de <option>
-const DIRH_DB="jarvis_dirhandle_db", DIRH_STORE="handles", DIRH_KEY="mainKmzFolder";
-function dirhOpen(){
-  return new Promise((resolve,reject)=>{
-    const req=indexedDB.open(DIRH_DB,1);
-    req.onupgradeneeded=()=>{ if(!req.result.objectStoreNames.contains(DIRH_STORE)) req.result.createObjectStore(DIRH_STORE); };
-    req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
-  });
-}
-async function dirhSave(handle){
-  const db=await dirhOpen();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(DIRH_STORE,"readwrite");
-    tx.objectStore(DIRH_STORE).put(handle,DIRH_KEY);
-    tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error);
-  });
-}
-async function dirhLoad(){
-  const db=await dirhOpen();
-  return new Promise((resolve,reject)=>{
-    const tx=db.transaction(DIRH_STORE,"readonly");
-    const req=tx.objectStore(DIRH_STORE).get(DIRH_KEY);
-    req.onsuccess=()=>resolve(req.result||null);
-    req.onerror=()=>reject(req.error);
-  });
-}
-async function collectFilesFromHandle(dirHandle,prefix){
-  prefix=prefix||dirHandle.name;
-  const out=[];
-  for await (const [name,handle] of dirHandle.entries()){
-    if(handle.kind==="file"){
-      if(/\.(kmz|kml)$/i.test(name)){
-        const file=await handle.getFile();
-        file.webkitRelativePath=prefix+"/"+name;
-        out.push(file);
-      }
-    }else if(handle.kind==="directory"){
-      out.push(...await collectFilesFromHandle(handle,prefix+"/"+name));
-    }
-  }
-  return out;
-}
-function populateMainFolderSelect(files){
-  mainFolderFiles=files;
+/* ============ KMZ principais na nuvem (Supabase Storage), agrupados por UF ============ */
+/* Sem seletor de pasta, sem permissão de disco: a lista vem de um bucket
+   público (kmz-files) via HTTP normal, igual o resto dos dados do app. */
+const KMZ_BUCKET="kmz-files";
+let mainFolderFiles=[]; // [{name,path}] indexados pelo value de <option>
+function populateMainFolderSelect(entries){
+  mainFolderFiles=entries;
   const groups={};
-  files.forEach((f,i)=>{
-    const parts=(f.webkitRelativePath||f.name).split("/");
-    const uf=(parts.length>=3?parts[1]:parts[0]).trim().replace(/\s+/g," ");
+  entries.forEach((f,i)=>{
+    const parts=f.path.split("/");
+    const uf=parts.length>=2?parts[0]:"Geral";
     (groups[uf]=groups[uf]||[]).push(i);
   });
   const sel=$("mainFolderSelect");
+  if(!entries.length){ sel.innerHTML='<option value="" disabled>Nenhum KMZ encontrado na nuvem.</option>'; return; }
   sel.innerHTML=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"pt-BR")).map(uf=>
       "<optgroup label=\""+esc(uf)+"\">"+
-        groups[uf].map(i=>'<option value="'+i+'">'+esc(files[i].name)+"</option>").join("")+
+        groups[uf].map(i=>'<option value="'+i+'">'+esc(entries[i].name)+"</option>").join("")+
       "</optgroup>"
     ).join("");
 }
-async function tryRestoreMainFolder(){
-  if(!("showDirectoryPicker" in window)){
-    // file:// (arquivo aberto direto) ou navegador sem File System Access API:
-    // nunca dá pra lembrar a pasta entre sessões — avisa isso na própria tela.
-    const lbl=$("mainFolderLabel");
-    if(lbl) lbl.innerHTML='Rede principal por UF — <b style="color:var(--warn)">abra pelo link publicado (https) pra não precisar selecionar a pasta toda vez</b>';
-    return;
-  }
+async function loadMainFolderFromCloud(){
   try{
-    const handle=await dirhLoad(); if(!handle) return;
-    if((await handle.queryPermission({mode:"read"}))!=="granted") return; // precisa de clique p/ reconfirmar
-    const files=await collectFilesFromHandle(handle);
-    if(files.length) populateMainFolderSelect(files);
-  }catch(e){ console.warn("restaurar pasta de KMZ",e); }
-}
-$("mainFolderSelect").addEventListener("mousedown",async e=>{
-  if(mainFolderFiles.length) return; // já carregada, comporta-se como lista normal
-  e.preventDefault();
-  if("showDirectoryPicker" in window){
-    try{
-      // Se já tem uma pasta salva de uma vez anterior, reaproveita: o Chrome pode ter
-      // "esquecido" a permissão depois de reiniciar (isso é normal, não dura pra sempre),
-      // mas requestPermission() nesse handle já salvo só mostra uma confirmação rápida
-      // ("Permitir acesso a esta pasta?") em vez de reabrir o navegador de pastas do zero.
-      let handle=await dirhLoad();
-      if(handle){
-        const perm=await handle.requestPermission({mode:"read"});
-        if(perm!=="granted") throw {name:"NotAllowedError"};
-      }else{
-        handle=await window.showDirectoryPicker({id:"mainKmzFolder",mode:"read"});
-        await dirhSave(handle);
-      }
-      const files=await collectFilesFromHandle(handle);
-      if(files.length){ populateMainFolderSelect(files); toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok"); }
-      else toast("Nenhum arquivo .kmz/.kml encontrado na pasta selecionada.","err");
-    }catch(err){
-      if(err.name==="AbortError"){ /* usuário cancelou, nada a fazer */ }
-      else if(err.name==="NotAllowedError"){ toast("Permissão negada para a pasta.","err"); }
-      else console.warn("selecionar pasta",err);
+    const {data:rootEntries,error}=await sb.storage.from(KMZ_BUCKET).list("",{limit:1000});
+    if(error) throw error;
+    const out=[];
+    for(const entry of rootEntries||[]){
+      if(/\.(kmz|kml)$/i.test(entry.name)){ out.push({name:entry.name,path:entry.name}); continue; }
+      // entrada sem metadata = "pasta" (UF) no Storage
+      const {data:files,error:err2}=await sb.storage.from(KMZ_BUCKET).list(entry.name,{limit:1000});
+      if(err2) continue;
+      (files||[]).filter(f=>/\.(kmz|kml)$/i.test(f.name)).forEach(f=>out.push({name:f.name,path:entry.name+"/"+f.name}));
     }
-  }else{
-    $("folderMainPicker").click(); // navegador sem File System Access API
+    populateMainFolderSelect(out);
+  }catch(e){
+    console.warn("loadMainFolderFromCloud",e);
+    const sel=$("mainFolderSelect");
+    if(sel) sel.innerHTML='<option value="" disabled>Erro ao listar KMZ na nuvem.</option>';
   }
-});
-$("folderMainPicker").onchange=e=>{
-  const files=Array.from(e.target.files||[]).filter(f=>/\.(kmz|kml)$/i.test(f.name));
-  e.target.value="";
-  if(!files.length){ toast("Nenhum arquivo .kmz/.kml encontrado na pasta selecionada.","err"); return; }
-  populateMainFolderSelect(files);
-  toast(files.length+" arquivo(s) .kmz/.kml encontrados na pasta.","ok");
-};
-$("btnLoadSelectedMains").onclick=()=>{
+}
+$("btnLoadSelectedMains").onclick=async()=>{
   const sel=$("mainFolderSelect");
-  const files=Array.from(sel.selectedOptions).map(o=>mainFolderFiles[o.value]).filter(Boolean);
-  if(!files.length){ toast("Selecione ao menos um arquivo na lista (Ctrl/Cmd+clique para vários).","err"); return; }
-  replaceMains(files);
+  const picked=Array.from(sel.selectedOptions).map(o=>mainFolderFiles[o.value]).filter(Boolean);
+  if(!picked.length){ toast("Selecione ao menos um arquivo na lista (Ctrl/Cmd+clique para vários).","err"); return; }
+  const btn=$("btnLoadSelectedMains"); btn.disabled=true;
+  try{
+    toast("Baixando "+picked.length+" arquivo(s) da nuvem…");
+    const files=[];
+    for(const p of picked){
+      const {data,error}=await sb.storage.from(KMZ_BUCKET).download(p.path);
+      if(error){ toast("Erro ao baixar "+p.name+": "+error.message,"err"); continue; }
+      files.push(new File([data],p.name));
+    }
+    if(files.length) await replaceMains(files);
+  } finally { btn.disabled=false; }
 };
 async function replaceMains(files){
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
@@ -1488,7 +1419,7 @@ $("expCsv").onclick=()=>{
 $("lightbox").onclick=()=>$("lightbox").classList.remove("show");
 document.addEventListener("keydown",e=>{ if(e.key==="Escape")$("lightbox").classList.remove("show"); });
 loadAll();
-tryRestoreMainFolder();
+loadMainFolderFromCloud();
 setTimeout(()=>map.invalidateSize(),300);
 window.addEventListener("resize",()=>map.invalidateSize());
 </script>
