@@ -62,6 +62,16 @@
   .kpi .n.done{color:var(--done)} .kpi .n.warn{color:var(--warn)}
   .kpi .l{font-size:9.5px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.6px}
 
+  /* ---------- Barra de ações (topo) ---------- */
+  .toolbar{
+    flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px;
+    background:linear-gradient(180deg,#0f171f,#0b1219);border-bottom:1px solid var(--line);
+    overflow-x:auto;white-space:nowrap;
+  }
+  .toolbar .btn{width:auto;flex:0 0 auto;padding:8px 13px;font-size:12.5px}
+  .toolbar .btn svg{width:14px;height:14px}
+  .toolbar .save-badge{flex:0 0 auto;padding-top:0}
+
   /* ---------- Layout ---------- */
   .stage{flex:1;display:flex;min-height:0}
   aside{
@@ -262,6 +272,30 @@
   </div>
 </header>
 
+<div class="toolbar">
+  <button class="btn" id="btnSavePrev">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+    Salvar alterações
+  </button>
+  <button class="btn primary" id="expKmz" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
+    KMZ consolidado
+  </button>
+  <button class="btn" id="expCsv" disabled>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
+    Relatório CSV
+  </button>
+  <button class="btn" id="clearAll">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+    Limpar tudo
+  </button>
+  <button class="btn" id="btnReload">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
+    ↻ Recarregar
+  </button>
+  <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Sessão salva localmente</div>
+</div>
+
 <div class="stage">
   <aside>
     <div class="scroll">
@@ -271,7 +305,7 @@
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
           <div class="field" id="mainFolderRow" style="margin-bottom:11px">
-            <label>Rede principal por UF — pasta D:\Preventiva_Rede\KMZ'S</label>
+            <label>Rede principal por UF — pasta D:\Preventivas-KMZ\KMZ'S</label>
             <select id="mainFolderSelect"><option value="">Clique para selecionar a pasta…</option></select>
           </div>
           <div class="drop" id="dropMain">
@@ -349,30 +383,6 @@
           <p class="empty" style="text-align:left;margin:9px 0 0;padding:0">
             Ativo pontual (CTO/POP/caixa) da rede principal é considerado <b style="color:var(--done)">coberto</b> quando há geometria de alguma preventiva <b>visível</b> dentro do raio.
           </p>
-        </div>
-      </section>
-
-      <!-- EXPORTAR -->
-      <section class="block">
-        <h2><span class="dot warn"></span>Exportar</h2>
-        <div class="body" style="display:flex;flex-direction:column;gap:9px">
-          <button class="btn primary" id="expKmz" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>
-            KMZ consolidado (principal + preventivas)
-          </button>
-          <button class="btn" id="expCsv" disabled>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
-            Relatório de preventivas (CSV)
-          </button>
-          <button class="btn" id="clearAll">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
-            Limpar tudo
-          </button>
-          <button class="btn" id="btnReload">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
-            ↻ Recarregar dados do servidor
-          </button>
-          <div class="save-badge" id="saveBadge"><span class="dot done"></span>Sessão salva localmente</div>
         </div>
       </section>
 
@@ -593,7 +603,8 @@ function renderMainOne(mo){
       const nm=(f.properties&&(f.properties.name||f.properties.Name));
       if(nm) l.bindPopup("<b>"+esc(nm)+"</b><br><small style='color:#5f7080'>"+esc(mo.name)+"</small>");
     }
-  }).addTo(map);
+  });
+  if(mo.visible!==false) lg.addTo(map);
   mainLayerGroups[mo.id]=lg;
 }
 function renderMain(){
@@ -816,16 +827,30 @@ function renderMainList(){
   let totalFeat=0;
   loaded.innerHTML=state.mains.map(m=>{
     const s=statsOf(m.geojson); totalFeat+=s.total;
-    return `<div class="filecard">
+    const vis=m.visible!==false;
+    return `<div class="filecard"${vis?"":' style="opacity:.5"'}>
       <span class="dot optic"></span>
       <div class="meta"><div class="nm">${esc(m.name)}</div>
         <div class="sub">${s.pts} pontos · ${s.lin} linhas · ${s.pol} áreas</div></div>
+      <button class="icon-btn" data-act="mvis" data-id="${m.id}" title="Mostrar/ocultar">
+        ${vis
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 5.1A9 9 0 0 1 21 12a10 10 0 0 1-3.1 3.8M6.5 6.6A10 10 0 0 0 3 12a9 9 0 0 0 12 6.4"/></svg>'}
+      </button>
       <button class="icon-btn" data-act="mzoom" data-id="${m.id}" title="Enquadrar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
       <button class="icon-btn danger" data-act="mdel" data-id="${m.id}" title="Remover"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
     </div>`;
   }).join("");
   tag.textContent=state.mains.length+" arquivo"+(state.mains.length>1?"s":"")+" · "+totalFeat+" feições";
   loaded.querySelectorAll("[data-act='mzoom']").forEach(b=>b.onclick=()=>{ const lg=mainLayerGroups[b.dataset.id]; if(lg)map.fitBounds(lg.getBounds(),{padding:[40,40]}); });
+  loaded.querySelectorAll("[data-act='mvis']").forEach(b=>b.onclick=()=>{
+    const mo=state.mains.find(x=>x.id===b.dataset.id); if(!mo) return;
+    mo.visible=!(mo.visible!==false);
+    const lg=mainLayerGroups[mo.id];
+    if(lg){ if(mo.visible) lg.addTo(map); else map.removeLayer(lg); }
+    refresh();
+    sbCall(()=>sb.from('mains').update({visible:mo.visible}).eq('id',mo.id), "Erro ao salvar visibilidade");
+  });
   loaded.querySelectorAll("[data-act='mdel']").forEach(b=>b.onclick=()=>{
     if(!confirm("Remover este arquivo da rede principal?")) return;
     state.mains=state.mains.filter(x=>x.id!==b.dataset.id);
@@ -979,7 +1004,7 @@ function refresh(){
 }
 
 function fitAll(){
-  const groups=[]; Object.values(mainLayerGroups).forEach(g=>groups.push(g));
+  const groups=[]; Object.values(mainLayerGroups).forEach(g=>{if(map.hasLayer(g))groups.push(g);});
   Object.values(prevLayerGroups).forEach(g=>{if(map.hasLayer(g))groups.push(g);});
   groups.push(notifLayerGroup);
   const withLayers=groups.filter(g=>g.getLayers().length);
@@ -1260,6 +1285,12 @@ $("clearAll").onclick=async()=>{
   toast("Tudo limpo.","ok");
 };
 $("btnReload").onclick=()=>loadAll();
+$("btnSavePrev").onclick=async()=>{
+  if(!state.preventivas.length){ toast("Nenhuma preventiva pra salvar.","err"); return; }
+  const rows=state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}));
+  const ok=await sbCall(()=>sb.from('preventivas').upsert(rows), "Erro ao salvar preventivas");
+  if(ok) toast(rows.length+" preventiva(s) salva(s) no servidor.","ok");
+};
 
 /* ============ Persistência (Supabase — compartilhado entre dispositivos) ============ */
 async function sbCall(fn, errMsg){
@@ -1286,6 +1317,33 @@ function chunk(arr,size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.pu
    uma falha isolada e passageira numa consulta não pode apagar o que já estava
    carregado. Cada tabela tenta de novo algumas vezes antes de desistir, e mesmo
    se uma falhar de vez, as outras que deram certo continuam sendo exibidas. */
+/* Cache local (IndexedDB) — rede de segurança: se o Supabase falhar mesmo
+   depois das tentativas, mostra a última versão que carregou com sucesso
+   neste navegador em vez de deixar a tela vazia. Guardado com timeout pra
+   nunca travar (IndexedDB pode nunca responder em páginas file://). */
+const CACHE_DB="jarvis_cache_db", CACHE_STORE="kv";
+function withTimeout(p,ms){ return new Promise((resolve,reject)=>{ const t=setTimeout(()=>reject(new Error("timeout")),ms); p.then(v=>{clearTimeout(t);resolve(v);},e=>{clearTimeout(t);reject(e);}); }); }
+function cacheOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(CACHE_DB,1);
+    req.onupgradeneeded=()=>{ if(!req.result.objectStoreNames.contains(CACHE_STORE)) req.result.createObjectStore(CACHE_STORE); };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+async function cacheSet(key,value){
+  try{
+    const db=await withTimeout(cacheOpen(),1500);
+    await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readwrite"); tx.objectStore(CACHE_STORE).put(value,key); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); }),1500);
+  }catch(e){ console.warn("cacheSet",key,e); }
+}
+async function cacheGet(key){
+  try{
+    const db=await withTimeout(cacheOpen(),1500);
+    return await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readonly"); const req=tx.objectStore(CACHE_STORE).get(key); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }),1500);
+  }catch(e){ console.warn("cacheGet",key,e); return null; }
+}
+
 async function withRetry(queryFn, tries, delayMs){
   tries=tries||3; delayMs=delayMs||1500;
   let res;
@@ -1305,16 +1363,28 @@ async function loadAll(){
     withRetry(()=>sb.from('notifications').select('id,fileId,os,municipio,name,lat,lng,status').order('created_at')),
     withRetry(()=>sb.from('settings').select('*').eq('id',1).maybeSingle())
   ]);
-  const failed=[];
-  if(mainsRes.error){ failed.push("rede principal"); console.warn("loadAll mains",mainsRes.error); } else state.mains=mainsRes.data||[];
-  if(prevRes.error){ failed.push("preventivas"); console.warn("loadAll preventivas",prevRes.error); } else state.preventivas=prevRes.data||[];
-  if(filesRes.error){ failed.push("arquivos de notificações"); console.warn("loadAll notif_files",filesRes.error); } else state.notifFiles=filesRes.data||[];
-  if(notifRes.error){ failed.push("notificações"); console.warn("loadAll notifications",notifRes.error); } else state.notifications=notifRes.data||[];
-  if(settingsRes.error){ failed.push("configurações"); console.warn("loadAll settings",settingsRes.error); }
-  else if(settingsRes.data){
+  const failed=[], stale=[];
+  async function apply(res,key,label){
+    if(!res.error){ cacheSet(key,res.data||[]); return res.data||[]; }
+    console.warn("loadAll "+key,res.error);
+    const cached=await cacheGet(key);
+    if(cached!=null){ stale.push(label); return cached; }
+    failed.push(label); return [];
+  }
+  state.mains=await apply(mainsRes,"mains","rede principal");
+  state.preventivas=await apply(prevRes,"preventivas","preventivas");
+  state.notifFiles=await apply(filesRes,"notif_files","arquivos de notificações");
+  state.notifications=await apply(notifRes,"notifications","notificações");
+  if(settingsRes.error){
+    console.warn("loadAll settings",settingsRes.error);
+    const cached=await cacheGet("settings");
+    if(cached) { stale.push("configurações"); Object.assign(state,cached); }
+    else failed.push("configurações");
+  }else if(settingsRes.data){
     const d=settingsRes.data;
     state.radius=d.radius; state.highlight=d.highlight; state.showLabels=d.showLabels;
     state.showCTO=d.showCTO!==false; state.showCEO=d.showCEO!==false; state.showNotifications=d.showNotifications!==false;
+    cacheSet("settings",{radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,showCTO:state.showCTO,showCEO:state.showCEO,showNotifications:state.showNotifications});
   }
   colorIx=state.preventivas.length;
   $("radius").value=state.radius; $("radiusVal").textContent=state.radius+" m";
@@ -1324,7 +1394,8 @@ async function loadAll(){
   if(state.showNotifications) notifLayerGroup.addTo(map); else map.removeLayer(notifLayerGroup);
   refresh();
   setTimeout(fitAll,200);
-  if(failed.length) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no rodapé) para tentar de novo.","err");
+  if(failed.length) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no topo) para tentar de novo.","err");
+  else if(stale.length) toast("Servidor indisponível agora — mostrando última versão salva neste navegador: "+stale.join(", ")+".","err");
   else if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Dados carregados do Supabase.","ok");
   $("btnReload") && ($("btnReload").disabled=false);
 }
