@@ -333,6 +333,8 @@
             <span class="val" id="radiusVal">50 m</span>
           </div>
           <label class="switch"><input type="checkbox" id="hl" checked><span class="track"></span>Destacar ativos cobertos no mapa</label>
+          <label class="switch"><input type="checkbox" id="showCTO" checked><span class="track"></span>Exibir CTO no mapa</label>
+          <label class="switch"><input type="checkbox" id="showCEO" checked><span class="track"></span>Exibir CEO no mapa</label>
           <p class="empty" style="text-align:left;margin:9px 0 0;padding:0">
             Ativo pontual (CTO/POP/caixa) da rede principal é considerado <b style="color:var(--done)">coberto</b> quando há geometria de alguma preventiva <b>visível</b> dentro do raio.
           </p>
@@ -390,7 +392,7 @@ const SUPABASE_URL = "https://hhwghwqynrxrksrzjvgc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
-let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true };
+let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true };
 let colorIx = 0;
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
@@ -473,6 +475,13 @@ function eachCoord(geom, cb){
   if(geom.type==="GeometryCollection"){ (geom.geometries||[]).forEach(g=>eachCoord(g,cb)); return; }
   const walk=c=>{ if(typeof c[0]==="number"){cb(c[0],c[1]);} else c.forEach(walk); };
   if(geom.coordinates) walk(geom.coordinates);
+}
+/* classifica um ativo pontual pelo nome do placemark (convenção comum nas KMZ: "CTO ...", "CEO ...") */
+function classifyAssetType(name){
+  const s=String(name||"").trim().toUpperCase();
+  if(s.startsWith("CTO")) return "CTO";
+  if(s.startsWith("CEO")) return "CEO";
+  return "outro";
 }
 /* coleta ativos pontuais (Point/MultiPoint) */
 function collectPoints(feature, out){
@@ -558,8 +567,10 @@ function renderMainOne(mo){
       return {color:p.stroke||"#7fb2c9", weight:(p["stroke-width"]||2), opacity:0.85, fillColor:p.fill||"#7fb2c9", fillOpacity:(p["fill-opacity"]!=null?p["fill-opacity"]:0.12)};
     },
     pointToLayer:(f,ll)=>{
+      const nm=(f.properties&&(f.properties.name||f.properties.Name))||"";
       const m=L.circleMarker(ll,{renderer:canvas,radius:4,weight:1.4,color:"#0b1219",fillColor:"#8fb7cc",fillOpacity:0.95});
       m._asset={lat:ll.lat,lng:ll.lng};
+      m._assetType=classifyAssetType(nm);
       mainPointMarkers.push(m);
       return m;
     },
@@ -745,9 +756,11 @@ function computeCoverage(){
   // recolorir marcadores principais
   const hl=state.highlight;
   mainPointMarkers.forEach(m=>{
+    const hidden=(m._assetType==="CTO"&&!state.showCTO)||(m._assetType==="CEO"&&!state.showCEO);
+    if(hidden){ m.setStyle({radius:0,opacity:0,fillOpacity:0}); return; }
     const as=mainAssets.find(x=>x.lat===m._asset.lat&&x.lng===m._asset.lng);
     const done=hl&&as&&as.covered;
-    m.setStyle({fillColor:done?"#34d399":"#8fb7cc",color:done?"#08351f":"#0b1219",radius:done?5:4});
+    m.setStyle({fillColor:done?"#34d399":"#8fb7cc",color:done?"#08351f":"#0b1219",radius:done?5:4,opacity:1,fillOpacity:0.95});
   });
 
   covBlock.style.display="";
@@ -1113,6 +1126,8 @@ function saveSettings(){ return sbCall(()=>sb.from('settings').upsert({id:1,radi
 $("radius").onchange=()=>{ refresh(); saveSettings(); };
 $("hl").onchange=e=>{ state.highlight=e.target.checked; refresh(); saveSettings(); };
 $("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventivas.forEach(renderPrev); saveSettings(); };
+$("showCTO").onchange=e=>{ state.showCTO=e.target.checked; refresh(); };
+$("showCEO").onchange=e=>{ state.showCEO=e.target.checked; refresh(); };
 
 /* limpar */
 $("clearAll").onclick=async()=>{
