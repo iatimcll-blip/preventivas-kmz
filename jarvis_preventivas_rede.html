@@ -1179,17 +1179,20 @@ $("btnLoadSelectedMains").onclick=async()=>{
   const sel=$("mainFolderSelect");
   const picked=Array.from(sel.selectedOptions).map(o=>mainFolderFiles[o.value]).filter(Boolean);
   if(!picked.length){ toast("Selecione ao menos um arquivo na lista (Ctrl/Cmd+clique para vários).","err"); return; }
-  const btn=$("btnLoadSelectedMains"); btn.disabled=true;
+  const btn=$("btnLoadSelectedMains"); const btnTextOrig=btn.textContent;
+  btn.disabled=true;
   try{
-    toast("Baixando "+picked.length+" arquivo(s) da nuvem…");
     const files=[];
-    for(const p of picked){
+    for(let i=0;i<picked.length;i++){
+      const p=picked[i];
+      btn.textContent="Baixando "+(i+1)+"/"+picked.length+" — "+p.name+"…";
+      toast("Baixando "+p.name+" da nuvem ("+(i+1)+"/"+picked.length+")…");
       const {data,error}=await sb.storage.from(KMZ_BUCKET).download(p.path);
       if(error){ toast("Erro ao baixar "+p.name+": "+error.message,"err"); continue; }
       files.push(new File([data],p.name));
     }
-    if(files.length) await replaceMains(files);
-  } finally { btn.disabled=false; }
+    if(files.length){ btn.textContent="Processando no mapa…"; await replaceMains(files); }
+  } finally { btn.disabled=false; btn.textContent=btnTextOrig; }
 };
 async function replaceMains(files){
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
