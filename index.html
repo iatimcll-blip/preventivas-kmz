@@ -109,7 +109,7 @@
     cursor:pointer;transition:.15s;background:#0e1922;color:var(--ink-2);
   }
   .drop:hover,.drop.hot{border-color:var(--optic);background:#0d2129;color:var(--ink)}
-  .drop:focus-visible,.icon-btn:focus-visible,.btn:focus-visible,#btnSat:focus-visible,#btnFit:focus-visible{
+  .drop:focus-visible,.icon-btn:focus-visible,.btn:focus-visible,#btnSat:focus-visible,#btnLocate:focus-visible,#btnFit:focus-visible{
     outline:2px solid var(--optic);outline-offset:2px;
   }
   .drop svg{width:22px;height:22px;opacity:.8;margin-bottom:6px}
@@ -203,7 +203,9 @@
     color:var(--ink);cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(6px)}
   .map-btns button:hover{border-color:var(--optic);color:var(--optic)}
   .map-btns button.active{border-color:var(--optic);color:var(--optic)}
+  .map-btns button.locating svg{animation:locatePulse .9s ease-in-out infinite alternate}
   .map-btns svg{width:17px;height:17px}
+  @keyframes locatePulse{to{transform:scale(1.22);opacity:.55}}
 
   /* etiqueta "Preventiva + arquivo" fixa no mapa */
   .leaflet-tooltip.prev-tip{background:none;border:none;box-shadow:none;padding:0;white-space:nowrap;font:inherit}
@@ -281,7 +283,7 @@
     .leaflet-tooltip.prev-tip{display:none}
     .leaflet-popup-content{max-width:calc(100vw - 80px)}
   }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   :focus-visible{outline:2px solid var(--optic);outline-offset:2px}
 </style>
 </head>
@@ -425,6 +427,7 @@
   <div id="map">
     <div class="map-btns">
       <button id="btnSat" title="Alternar satélite / ruas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 0 1 20 0 10 10 0 0 1-20 0z"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></button>
+      <button id="btnLocate" title="Centralizar no meu local"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="9" opacity=".45"/></svg></button>
       <button id="btnFit" title="Enquadrar tudo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     </div>
     <div class="legend" id="legend" style="display:none"><h4>Legenda</h4><div id="legendItems"></div></div>
@@ -497,12 +500,40 @@ const tileStreet = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.p
 const tileSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,attribution:"© Esri"});
 let satOn=false; tileStreet.addTo(map);
 document.getElementById("btnSat").setAttribute("aria-label","Alternar entre mapa de ruas e satélite");
+document.getElementById("btnLocate").setAttribute("aria-label","Centralizar no meu local");
 document.getElementById("btnFit").setAttribute("aria-label","Enquadrar todos os elementos no mapa");
 document.getElementById("btnSat").onclick = function(){
   satOn=!satOn; this.classList.toggle("active",satOn);
   if(satOn){map.removeLayer(tileStreet);tileSat.addTo(map);} else {map.removeLayer(tileSat);tileStreet.addTo(map);}
 };
 document.getElementById("btnFit").onclick = fitAll;
+
+let userLocationMarker=null,userAccuracyCircle=null;
+document.getElementById("btnLocate").onclick=function(){
+  const button=this;
+  if(!navigator.geolocation){toast("Este dispositivo não oferece localização pelo navegador.","err");return;}
+  button.disabled=true;button.classList.add("locating");
+  toast("Buscando sua localização…");
+  navigator.geolocation.getCurrentPosition(position=>{
+    const lat=position.coords.latitude,lng=position.coords.longitude;
+    const accuracy=Math.max(0,position.coords.accuracy||0);
+    if(userLocationMarker) map.removeLayer(userLocationMarker);
+    if(userAccuracyCircle) map.removeLayer(userAccuracyCircle);
+    userAccuracyCircle=L.circle([lat,lng],{radius:accuracy||8,color:"#2ad7e8",weight:1,opacity:.65,fillColor:"#2ad7e8",fillOpacity:.1,interactive:false}).addTo(map);
+    userLocationMarker=L.circleMarker([lat,lng],{radius:8,color:"#e8f1f5",weight:3,fillColor:"#2ad7e8",fillOpacity:1}).addTo(map)
+      .bindPopup('<div class="pv-pop"><b>Sua localização atual</b><div class="pv-sub">Precisão aproximada: '+Math.round(accuracy)+' m</div></div>');
+    const zoom=accuracy>1500?14:accuracy>500?15:accuracy>150?16:18;
+    map.setView([lat,lng],zoom,{animate:true});
+    userLocationMarker.openPopup();
+    button.classList.add("active");
+    toast("Localização encontrada · precisão aproximada de "+Math.round(accuracy)+" m.","ok");
+    button.disabled=false;button.classList.remove("locating");
+  },error=>{
+    const messages={1:"Permissão de localização negada. Autorize o acesso à localização nas configurações do navegador.",2:"Não foi possível obter sua localização. Ative o GPS e tente novamente.",3:"A busca da localização demorou demais. Tente novamente em um local com melhor sinal."};
+    toast(messages[error.code]||"Não foi possível obter sua localização.","err");
+    button.disabled=false;button.classList.remove("locating");
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
+};
 
 let mainPointMarkers=[], mainAssets=[];
 const mainLayerGroups = {}; // id -> L.geoJSON layer
