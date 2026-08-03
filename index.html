@@ -101,6 +101,9 @@
     cursor:pointer;transition:.15s;background:#0e1922;color:var(--ink-2);
   }
   .drop:hover,.drop.hot{border-color:var(--optic);background:#0d2129;color:var(--ink)}
+  .drop:focus-visible,.icon-btn:focus-visible,.btn:focus-visible,#btnSat:focus-visible,#btnFit:focus-visible{
+    outline:2px solid var(--optic);outline-offset:2px;
+  }
   .drop svg{width:22px;height:22px;opacity:.8;margin-bottom:6px}
   .drop b{color:var(--ink);font-weight:600}
   .drop .hint{font-size:11px;color:var(--ink-3);margin-top:3px}
@@ -309,7 +312,7 @@
             <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Carregando lista…</option></select>
             <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
           </div>
-          <div class="drop" id="dropMain">
+          <div class="drop" id="dropMain" role="button" tabindex="0" aria-label="Anexar arquivos KMZ ou KML da rede principal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
             <div><b>Anexar KMZ principal</b></div>
             <div class="hint">Arraste um ou vários arquivos, ou clique — .kmz ou .kml</div>
@@ -320,7 +323,7 @@
             <label>Buscar CTO/CEO no mapa</label>
             <div style="display:flex;gap:6px">
               <input type="text" id="assetSearch" placeholder="ex.: CTO-15" style="flex:1">
-              <button class="icon-btn" id="assetSearchBtn" title="Buscar" style="border:1px solid var(--line);flex:0 0 auto">
+              <button class="icon-btn" id="assetSearchBtn" type="button" aria-label="Buscar CTO ou CEO" title="Buscar" style="border:1px solid var(--line);flex:0 0 auto">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
               </button>
             </div>
@@ -333,7 +336,7 @@
       <section class="block">
         <h2><span class="dot done"></span>Preventivas realizadas <span class="tag" id="prevTag">0</span></h2>
         <div class="body">
-          <div class="drop" id="dropPrev" style="margin-bottom:11px">
+          <div class="drop" id="dropPrev" role="button" tabindex="0" aria-label="Adicionar arquivos KMZ ou KML de preventivas" style="margin-bottom:11px">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
             <div><b>Adicionar preventiva</b></div>
             <div class="hint">Um ou vários KMZ secundários de uma vez</div>
@@ -350,7 +353,7 @@
         <h2><span class="dot warn"></span>Nort. Equatorial <span class="tag" id="notifTag"></span></h2>
         <div class="body">
           <label class="switch" style="margin:0 0 11px"><input type="checkbox" id="showNotif" checked><span class="track"></span>Mostrar notificações no mapa</label>
-          <div class="drop" id="dropNotif" style="margin-bottom:11px">
+          <div class="drop" id="dropNotif" role="button" tabindex="0" aria-label="Anexar planilha de notificações" style="margin-bottom:11px">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
             <div><b>Anexar planilha de notificações</b></div>
             <div class="hint">.xlsx com a aba MAPEAMENTO_POSTES — busca os links da Coluna C</div>
@@ -463,6 +466,8 @@ const canvas = L.canvas({padding:0.5});
 const tileStreet = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,attribution:"© OpenStreetMap"});
 const tileSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,attribution:"© Esri"});
 let satOn=false; tileStreet.addTo(map);
+document.getElementById("btnSat").setAttribute("aria-label","Alternar entre mapa de ruas e satélite");
+document.getElementById("btnFit").setAttribute("aria-label","Enquadrar todos os elementos no mapa");
 document.getElementById("btnSat").onclick = function(){
   satOn=!satOn; this.classList.toggle("active",satOn);
   if(satOn){map.removeLayer(tileStreet);tileSat.addTo(map);} else {map.removeLayer(tileSat);tileStreet.addTo(map);}
@@ -480,6 +485,9 @@ const $=id=>document.getElementById(id);
 function toast(msg,type){const t=$("toast");t.textContent=msg;t.className="show "+(type||"");clearTimeout(t._t);t._t=setTimeout(()=>t.className="",3200);}
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function labelIconButtons(root){
+  root.querySelectorAll("button.icon-btn[title]").forEach(button=>button.setAttribute("aria-label",button.title));
+}
 function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 
 function haversine(aLat,aLng,bLat,bLng){
@@ -1004,6 +1012,28 @@ function refresh(){
   updateNotifStats();
   refreshLegend();
   updateKpis(cov);
+  labelIconButtons(document);
+}
+
+/* O painel lateral pode mudar de altura ao recalcular a cobertura. Em alguns
+   Chrome/Windows isso fazia o flex container do mapa encolher e deixava uma
+   faixa preta abaixo dele. Mantemos o estágio com a altura útil da janela e
+   só então pedimos ao Leaflet para redesenhar o canvas. */
+let mapLayoutFrame=0;
+function syncMapLayout(){
+  cancelAnimationFrame(mapLayoutFrame);
+  mapLayoutFrame=requestAnimationFrame(()=>{
+    const stage=document.querySelector(".stage");
+    if(window.matchMedia("(min-width:821px)").matches){
+      const height=Math.max(0,window.innerHeight-stage.getBoundingClientRect().top);
+      stage.style.height=height+"px";
+      stage.style.flex="0 0 "+height+"px";
+    }else{
+      stage.style.height="";
+      stage.style.flex="";
+    }
+    map.invalidateSize({pan:false});
+  });
 }
 
 function fitAll(){
@@ -1130,6 +1160,12 @@ async function addNotif(files){
 /* dropzones + inputs */
 function wireDrop(zone,input,handler){
   zone.onclick=()=>input.click();
+  zone.onkeydown=e=>{
+    if(e.key==="Enter"||e.key===" "){
+      e.preventDefault();
+      input.click();
+    }
+  };
   input.onchange=e=>{ if(e.target.files.length)handler(e.target.files); input.value=""; };
   ["dragenter","dragover"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add("hot");}));
   ["dragleave","drop"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove("hot");}));
@@ -1217,8 +1253,8 @@ function saveSettings(){
 $("radius").onchange=()=>{ refresh(); saveSettings(); };
 $("hl").onchange=e=>{ state.highlight=e.target.checked; refresh(); saveSettings(); };
 $("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventivas.forEach(renderPrev); saveSettings(); };
-$("showCTO").onchange=e=>{ state.showCTO=e.target.checked; refresh(); saveSettings(); };
-$("showCEO").onchange=e=>{ state.showCEO=e.target.checked; refresh(); saveSettings(); };
+$("showCTO").onchange=e=>{ state.showCTO=e.target.checked; refresh(); syncMapLayout(); saveSettings(); };
+$("showCEO").onchange=e=>{ state.showCEO=e.target.checked; refresh(); syncMapLayout(); saveSettings(); };
 $("showNotif").onchange=e=>{
   state.showNotifications=e.target.checked;
   if(state.showNotifications) notifLayerGroup.addTo(map); else map.removeLayer(notifLayerGroup);
@@ -1228,6 +1264,20 @@ $("showNotif").onchange=e=>{
 /* limpar */
 $("clearAll").onclick=async()=>{
   if(!confirm("Limpar rede principal, preventivas e notificações de TODOS OS DISPOSITIVOS? Esta ação não pode ser desfeita.")) return;
+  if(prompt("Para confirmar a limpeza global, digite LIMPAR.")!=="LIMPAR"){
+    toast("Limpeza global cancelada.","err");
+    return;
+  }
+  const cleared=await Promise.all([
+    sbCall(()=>sb.from('notifications').delete().not('id','is',null), "Erro ao limpar notificações"),
+    sbCall(()=>sb.from('notif_files').delete().not('id','is',null), "Erro ao limpar arquivos de notificações"),
+    sbCall(()=>sb.from('preventivas').delete().not('id','is',null), "Erro ao limpar preventivas"),
+    sbCall(()=>sb.from('mains').delete().not('id','is',null), "Erro ao limpar rede principal"),
+  ]);
+  if(!cleared.every(Boolean)){
+    toast("A limpeza não foi concluída. Recarregue os dados antes de tentar novamente.","err");
+    return;
+  }
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
   Object.values(prevLayerGroups).forEach(g=>map.removeLayer(g));
@@ -1235,12 +1285,6 @@ $("clearAll").onclick=async()=>{
   notifLayerGroup.clearLayers(); notifMarkers={};
   state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:state.radius,highlight:state.highlight,showLabels:state.showLabels};
   renderMain(); refresh();
-  await Promise.all([
-    sbCall(()=>sb.from('notifications').delete().not('id','is',null), "Erro ao limpar notificações"),
-    sbCall(()=>sb.from('notif_files').delete().not('id','is',null), "Erro ao limpar arquivos de notificações"),
-    sbCall(()=>sb.from('preventivas').delete().not('id','is',null), "Erro ao limpar preventivas"),
-    sbCall(()=>sb.from('mains').delete().not('id','is',null), "Erro ao limpar rede principal"),
-  ]);
   toast("Tudo limpo.","ok");
 };
 $("btnReload").onclick=()=>loadAll();
@@ -1428,7 +1472,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape")$("lightbox").class
 loadAll();
 loadMainFolderFromCloud();
 setTimeout(()=>map.invalidateSize(),300);
-window.addEventListener("resize",()=>map.invalidateSize());
+window.addEventListener("resize",syncMapLayout);
 /* Alguns Windows/Chrome deixam uma faixa da página sem repintar depois de
    restaurar/mover/trocar de monitor a janela (bug do compositor do navegador,
    não da página). Força um reflow completo + reajusta o mapa nesses gatilhos,
@@ -1437,10 +1481,11 @@ function forceReflow(){
   document.body.style.display="none";
   void document.body.offsetHeight; // força o navegador a aplicar antes de reverter
   document.body.style.display="";
-  map.invalidateSize();
+  syncMapLayout();
 }
 window.addEventListener("focus",forceReflow);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) forceReflow(); });
+syncMapLayout();
 </script>
 </body>
 </html>
