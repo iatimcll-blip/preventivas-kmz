@@ -253,7 +253,9 @@
   .access-form{display:grid;gap:10px}.access-form .btn-row{flex-wrap:wrap}.access-form .btn{flex:1 1 130px}.access-message{min-height:18px;margin-top:8px;color:var(--ink-3);font-size:11px;line-height:1.45}
   .access-user{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}.access-user b{display:block;font-size:13px;overflow-wrap:anywhere}.access-user small{color:var(--ink-3)}
   .access-create{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0a141c}.access-create h4{grid-column:1/-1;margin:0;color:var(--optic);font-size:12px}.access-create .wide{grid-column:1/-1}.access-create .btn{grid-column:1/-1}
-  .access-list{display:grid;gap:8px;margin-top:12px}.access-list-title{margin:16px 0 0;font-size:12px;color:var(--ink-2)}.access-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0a141c}.access-row .email{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink-3)}.access-row .profile-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.access-row select{min-width:0}.access-row label{font-size:10px;color:var(--ink-2)}.access-row .save-user{min-width:76px}
+  .access-list{display:grid;gap:8px;margin-top:12px}.access-list-title{margin:16px 0 0;font-size:12px;color:var(--ink-2)}.access-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0a141c}.access-row .email{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink-3)}.access-row .profile-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.access-row select{min-width:0}.access-row label{font-size:10px;color:var(--ink-2)}.access-row .save-user{min-width:76px}.access-row .status{grid-column:1/-1;font:700 10px var(--mono);color:var(--warn)}.access-row .status.approved{color:var(--done)}.access-row .manage-points{grid-column:1/-1}
+  .point-editor{margin-top:12px;padding:12px;border:1px solid var(--optic-dim);border-radius:10px;background:#07151b}.point-editor-head{display:flex;align-items:flex-start;gap:8px}.point-editor-head h4{margin:0;font-size:13px;color:var(--optic)}.point-editor-head small{display:block;margin-top:3px;color:var(--ink-3)}.point-editor-head .icon-btn{margin-left:auto}.point-tools{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.point-tools .btn{flex:1 1 120px}.point-results{display:grid;gap:6px;max-height:300px;overflow:auto;padding-right:3px}.point-group{margin:10px 0 5px;color:var(--ink-2);font:700 10px var(--mono);text-transform:uppercase}.point-option{display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#0a141c;font-size:11px;line-height:1.35}.point-option input{margin-top:2px;flex:0 0 auto}.point-option span{min-width:0;overflow-wrap:anywhere}.point-note{margin:7px 0;color:var(--ink-3);font-size:10px}
+  .auth-gate{position:fixed;inset:0;z-index:4500;display:none;place-items:center;padding:20px;background:radial-gradient(circle at 50% 30%,#12303c 0,#071016 45%,#020608 100%)}body[data-access="public"] .auth-gate{display:grid}.auth-gate-card{width:min(440px,100%);padding:26px;border:1px solid var(--line);border-radius:16px;background:#0b151dcc;text-align:center;box-shadow:0 24px 70px #000}.auth-gate-card .spark{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 14px;border-radius:14px;background:var(--optic);color:#062b30}.auth-gate-card h1{margin:0;font-size:22px}.auth-gate-card p{margin:9px 0 18px;color:var(--ink-3);font-size:12px;line-height:1.55}.auth-gate-card .btn{width:100%;justify-content:center}
   body[data-access="public"] #btnSavePrev,body[data-access="public"] #clearAll,body[data-access="public"] #dropPrev,body[data-access="public"] #dropNotif,body[data-access="public"] #mainFolderRow,
   body[data-access="viewer"] #btnSavePrev,body[data-access="viewer"] #clearAll,body[data-access="viewer"] #dropPrev,body[data-access="viewer"] #dropNotif,body[data-access="viewer"] #mainFolderRow{display:none!important}
   body[data-access="public"] .prev input,body[data-access="viewer"] .prev input{pointer-events:none;opacity:.72}
@@ -295,13 +297,22 @@
     .brand small{display:none}
     .leaflet-tooltip.prev-tip{display:none}
     .leaflet-popup-content{max-width:calc(100vw - 80px)}
-    .access-dialog{padding:15px}.access-create{grid-template-columns:1fr}.access-create h4,.access-create .wide,.access-create .btn{grid-column:1}.access-row{grid-template-columns:1fr 98px}.access-row .profile-fields{grid-template-columns:1fr}.access-row .save-user{grid-column:1/-1}.access-row label{align-self:center}
+    .access-dialog{padding:15px}.access-create{grid-template-columns:1fr}.access-create h4,.access-create .wide,.access-create .btn{grid-column:1}.access-row{grid-template-columns:1fr 98px}.access-row .profile-fields{grid-template-columns:1fr}.access-row .save-user{grid-column:1/-1}.access-row label{align-self:center}.point-editor{padding:10px}.point-results{max-height:250px}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   :focus-visible{outline:2px solid var(--optic);outline-offset:2px}
 </style>
 </head>
 <body data-access="public">
+
+<div class="auth-gate" id="authGate">
+  <div class="auth-gate-card">
+    <span class="spark"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>
+    <h1>Conteúdo protegido</h1>
+    <p>Entre com uma conta aprovada ou solicite seu acesso. O administrador definirá quais preventivas e pontos ficarão disponíveis para você.</p>
+    <button class="btn primary" id="gateAccess" type="button">Entrar ou solicitar acesso</button>
+  </div>
+</div>
 
 <header>
   <div class="brand">
@@ -454,11 +465,13 @@
 
 <div class="access-modal" id="accessModal" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
   <div class="access-dialog">
-    <div class="access-head"><div><h3 id="accessTitle">Acessos do sistema</h3><p>Consulta pública. Alterações exigem perfil Editor ou Administrador.</p></div><button class="icon-btn" id="closeAccess" type="button" aria-label="Fechar acessos">×</button></div>
+    <div class="access-head"><div><h3 id="accessTitle">Acessos do sistema</h3><p>O conteúdo é exibido somente após aprovação do Administrador.</p></div><button class="icon-btn" id="closeAccess" type="button" aria-label="Fechar acessos">×</button></div>
     <div id="signedOutAccess" class="access-form">
+      <div class="field"><label>Nome completo (para solicitar acesso)</label><input id="requestAccessName" type="text" maxlength="120" autocomplete="name" placeholder="Seu nome"></div>
+      <div class="field"><label>Telefone (opcional)</label><input id="requestAccessPhone" type="tel" maxlength="40" autocomplete="tel" placeholder="(00) 00000-0000"></div>
       <div class="field"><label>E-mail</label><input id="accessEmail" type="email" autocomplete="username" placeholder="seu@email.com"></div>
-      <div class="field"><label>Senha</label><input id="accessPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo de 6 caracteres"></div>
-      <div class="btn-row"><button class="btn primary" id="loginAccess" type="button">Entrar</button></div>
+      <div class="field"><label>Senha</label><input id="accessPassword" type="password" autocomplete="current-password" minlength="8" placeholder="Mínimo de 8 caracteres"></div>
+      <div class="btn-row"><button class="btn primary" id="loginAccess" type="button">Entrar</button><button class="btn" id="requestAccess" type="button">Solicitar acesso</button></div>
       <button class="btn" id="resetAccess" type="button">Recuperar senha</button>
     </div>
     <div id="signedInAccess" hidden>
@@ -472,11 +485,19 @@
           <div class="field wide"><label>E-mail</label><input id="newAccessEmail" type="email" autocomplete="off" placeholder="usuario@email.com"></div>
           <div class="field"><label>Senha temporária</label><input id="newAccessPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo de 8 caracteres"></div>
           <div class="field"><label>Tipo de acesso</label><select id="newAccessRole"><option value="viewer">Visualizador</option><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>
-          <label class="switch wide"><input type="checkbox" id="newAccessActive" checked><span class="track"></span>Acesso ativo</label>
-          <button class="btn primary" id="createAccessUser" type="button">Criar conta e liberar acesso</button>
+          <p class="empty wide" style="margin:0;padding:0;text-align:left">A conta será criada como pendente. Depois selecione os pontos e marque o acesso como aprovado.</p>
+          <button class="btn primary" id="createAccessUser" type="button">Criar conta pendente</button>
         </div>
         <h4 class="access-list-title">Contas cadastradas</h4>
         <div class="access-list" id="accessList"></div>
+        <div class="point-editor" id="pointAccessEditor" hidden>
+          <div class="point-editor-head"><div><h4 id="pointAccessTitle">Pontos permitidos</h4><small id="pointAccessCount"></small></div><button class="icon-btn" id="closePointAccess" type="button" aria-label="Fechar seleção de pontos">×</button></div>
+          <div class="field" style="margin-top:10px"><label>Buscar preventiva, OS, ponto ou município</label><input id="pointAccessSearch" type="search" placeholder="Digite para filtrar"></div>
+          <div class="point-tools"><button class="btn" id="selectVisiblePoints" type="button">Marcar resultados</button><button class="btn" id="clearUserPoints" type="button">Limpar seleção</button></div>
+          <div class="point-results" id="pointAccessResults"></div>
+          <p class="point-note" id="pointAccessNote"></p>
+          <button class="btn primary" id="savePointAccess" type="button" style="width:100%;justify-content:center">Salvar pontos permitidos</button>
+        </div>
       </div>
     </div>
     <div class="access-message" id="accessMessage" aria-live="polite"></div>
@@ -499,7 +520,8 @@ let publicSyncChannel=null;
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
-let currentUser=null,currentRole="public";
+let currentUser=null,currentRole="public",protectedDataLoaded=false;
+let pointAccessUser=null,pointAccessCatalog={preventivas:[],notifications:[]},selectedPreventivaIds=new Set(),selectedNotificationIds=new Set();
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
 const PHOTOS = {};
@@ -649,6 +671,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;",
 const roleNames={public:"Público",viewer:"Visualizador",editor:"Editor",admin:"Administrador"};
 const canEdit=()=>currentRole==="editor"||currentRole==="admin";
 const canAdmin=()=>currentRole==="admin";
+const hasContentAccess=()=>!!currentUser&&currentRole!=="public";
 function requireEditor(){if(canEdit())return true;toast("Entre com um acesso de Editor ou Administrador para alterar dados.","err");openAccessModal();return false;}
 function requireAdmin(){if(canAdmin())return true;toast("Esta ação exige acesso de Administrador.","err");openAccessModal();return false;}
 function setAccessMessage(message,isError){const el=$("accessMessage");el.textContent=message||"";el.style.color=isError?"#ffc1bf":"";}
@@ -668,63 +691,136 @@ function applyPermissions(){
 }
 async function refreshAccessSession(){
   const {data:{session}}=await sb.auth.getSession();
-  currentUser=session&&session.user||null;currentRole=currentUser?"viewer":"public";
+  currentUser=session&&session.user||null;currentRole="public";
   if(currentUser){
     const {data,error}=await sb.from("user_access").select("role,active").eq("user_id",currentUser.id).maybeSingle();
     if(!error&&data&&data.active) currentRole=data.role;
-    else if(data&&!data.active){await sb.auth.signOut();currentUser=null;currentRole="public";setAccessMessage("Este acesso está desativado.",true);}
+    else if(data&&!data.active){await sb.auth.signOut({scope:"local"});currentUser=null;setAccessMessage("Sua solicitação está aguardando aprovação do Administrador.",true);}
   }
   applyPermissions();
+  return hasContentAccess();
+}
+function pointLabel(notification){return [notification.os,notification.name,notification.municipio].filter(Boolean).join(" — ")||notification.id;}
+function filteredPointCatalog(){
+  const term=$("pointAccessSearch").value.trim().toLocaleLowerCase("pt-BR");
+  const match=value=>!term||String(value||"").toLocaleLowerCase("pt-BR").includes(term);
+  return {
+    preventivas:pointAccessCatalog.preventivas.filter(p=>match([p.name,p.date,p.ga].join(" "))),
+    notifications:pointAccessCatalog.notifications.filter(n=>match([n.os,n.name,n.municipio].join(" ")))
+  };
+}
+function updatePointAccessCount(){
+  $("pointAccessCount").textContent=selectedPreventivaIds.size+" preventiva(s) · "+selectedNotificationIds.size+" ponto(s) selecionado(s)";
+}
+function renderPointAccessOptions(){
+  if(!pointAccessUser)return;
+  const filtered=filteredPointCatalog(),shownNotifications=filtered.notifications.slice(0,200);
+  let html='<div class="point-group">Preventivas realizadas</div>';
+  html+=filtered.preventivas.map(p=>`<label class="point-option"><input type="checkbox" data-kind="preventiva" value="${esc(p.id)}"${selectedPreventivaIds.has(p.id)?" checked":""}><span><b>${esc(p.name)}</b>${p.date||p.ga?"<br>"+esc([p.date,p.ga].filter(Boolean).join(" · ")):""}</span></label>`).join("")||'<div class="empty">Nenhuma preventiva encontrada.</div>';
+  html+='<div class="point-group">Pontos de notificação</div>';
+  html+=shownNotifications.map(n=>`<label class="point-option"><input type="checkbox" data-kind="notification" value="${esc(n.id)}"${selectedNotificationIds.has(n.id)?" checked":""}><span>${esc(pointLabel(n))}</span></label>`).join("")||'<div class="empty">Nenhum ponto encontrado.</div>';
+  $("pointAccessResults").innerHTML=html;
+  $("pointAccessNote").textContent=filtered.notifications.length>200?"Mostrando os primeiros 200 de "+filtered.notifications.length+" pontos. Refine a busca ou use “Marcar resultados” para selecionar todos os encontrados.":filtered.notifications.length+" ponto(s) encontrado(s).";
+  $("pointAccessResults").querySelectorAll('input[type="checkbox"]').forEach(input=>input.onchange=()=>{
+    const set=input.dataset.kind==="preventiva"?selectedPreventivaIds:selectedNotificationIds;
+    input.checked?set.add(input.value):set.delete(input.value);updatePointAccessCount();
+  });
+  updatePointAccessCount();
+}
+async function openPointAccess(user){
+  pointAccessUser=user;$("pointAccessEditor").hidden=false;$("pointAccessTitle").textContent="Pontos permitidos · "+(user.full_name||user.email);$("pointAccessResults").innerHTML='<div class="empty">Carregando pontos…</div>';
+  const [preventivasRes,notificationsRes,userPrevRes,userNotifRes]=await Promise.all([
+    sb.from("preventivas").select("id,name,date,ga").order("created_at"),
+    sb.from("notifications").select("id,os,name,municipio").order("created_at"),
+    sb.from("user_preventiva_access").select("preventiva_id").eq("user_id",user.user_id),
+    sb.from("user_notification_access").select("notification_id").eq("user_id",user.user_id)
+  ]);
+  const error=preventivasRes.error||notificationsRes.error||userPrevRes.error||userNotifRes.error;
+  if(error){setAccessMessage("Não foi possível carregar os pontos: "+error.message,true);return;}
+  pointAccessCatalog={preventivas:preventivasRes.data||[],notifications:notificationsRes.data||[]};
+  selectedPreventivaIds=new Set((userPrevRes.data||[]).map(row=>row.preventiva_id));selectedNotificationIds=new Set((userNotifRes.data||[]).map(row=>row.notification_id));
+  $("pointAccessSearch").value="";renderPointAccessOptions();$("pointAccessEditor").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function savePointAccess(){
+  if(!pointAccessUser||!requireAdmin())return;
+  const button=$("savePointAccess");button.disabled=true;setAccessMessage("Salvando pontos permitidos…");
+  const userId=pointAccessUser.user_id;
+  const [deletePrev,deleteNotif]=await Promise.all([
+    sb.from("user_preventiva_access").delete().eq("user_id",userId),
+    sb.from("user_notification_access").delete().eq("user_id",userId)
+  ]);
+  let error=deletePrev.error||deleteNotif.error;
+  if(!error&&selectedPreventivaIds.size){const result=await sb.from("user_preventiva_access").insert([...selectedPreventivaIds].map(preventiva_id=>({user_id:userId,preventiva_id,created_by:currentUser.id})));error=result.error;}
+  if(!error&&selectedNotificationIds.size){
+    const rows=[...selectedNotificationIds].map(notification_id=>({user_id:userId,notification_id,created_by:currentUser.id}));
+    for(let i=0;i<rows.length&&!error;i+=500){const result=await sb.from("user_notification_access").insert(rows.slice(i,i+500));error=result.error;}
+  }
+  button.disabled=false;
+  if(error){setAccessMessage("Não foi possível salvar os pontos: "+error.message,true);return;}
+  setAccessMessage("Pontos permitidos salvos para "+(pointAccessUser.full_name||pointAccessUser.email)+".");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
 }
 async function loadAccessUsers(){
   if(!canAdmin())return;
   $("accessList").innerHTML='<div class="empty">Carregando usuários…</div>';
-  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,phone,role,active,created_at").order("created_at");
+  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,phone,role,active,approved_at,created_at").order("created_at");
   if(error){setAccessMessage("Não foi possível carregar os usuários: "+error.message,true);return;}
-  $("accessList").innerHTML=(data||[]).map(user=>`<div class="access-row" data-user="${esc(user.user_id)}"><div class="email" title="${esc(user.email)}">${esc(user.email)}</div><div class="profile-fields"><div class="field"><label>Nome</label><input class="profile-name" type="text" maxlength="120" value="${esc(user.full_name||"")}" placeholder="Nome completo"></div><div class="field"><label>Telefone</label><input class="profile-phone" type="tel" maxlength="40" value="${esc(user.phone||"")}" placeholder="Telefone"></div></div><select aria-label="Perfil de ${esc(user.email)}"><option value="viewer"${user.role==="viewer"?" selected":""}>Visualizador</option><option value="editor"${user.role==="editor"?" selected":""}>Editor</option><option value="admin"${user.role==="admin"?" selected":""}>Administrador</option></select><label><input class="profile-active" type="checkbox"${user.active?" checked":""}> Ativo</label><button class="btn save-user" type="button">Salvar</button></div>`).join("")||'<div class="empty">Nenhum usuário cadastrado.</div>';
+  $("accessList").innerHTML=(data||[]).map(user=>{const status=user.active?"Aprovado":user.approved_at?"Acesso suspenso":"Aguardando aprovação";return `<div class="access-row" data-user="${esc(user.user_id)}"><div class="email" title="${esc(user.email)}">${esc(user.email)}</div><div class="status${user.active?" approved":""}">${status}</div><div class="profile-fields"><div class="field"><label>Nome</label><input class="profile-name" type="text" maxlength="120" value="${esc(user.full_name||"")}" placeholder="Nome completo"></div><div class="field"><label>Telefone</label><input class="profile-phone" type="tel" maxlength="40" value="${esc(user.phone||"")}" placeholder="Telefone"></div></div><select aria-label="Perfil de ${esc(user.email)}"><option value="viewer"${user.role==="viewer"?" selected":""}>Visualizador</option><option value="editor"${user.role==="editor"?" selected":""}>Editor</option><option value="admin"${user.role==="admin"?" selected":""}>Administrador</option></select><label><input class="profile-active" type="checkbox"${user.active?" checked":""}> Aprovado</label><button class="btn save-user" type="button">Salvar</button>${user.role==="viewer"?'<button class="btn manage-points" type="button">Configurar preventivas e pontos</button>':""}</div>`;}).join("")||'<div class="empty">Nenhum usuário cadastrado.</div>';
   $("accessList").querySelectorAll(".access-row").forEach(row=>{
-    const select=row.querySelector("select"),active=row.querySelector(".profile-active"),name=row.querySelector(".profile-name"),phone=row.querySelector(".profile-phone"),button=row.querySelector(".save-user");
+    const user=(data||[]).find(item=>item.user_id===row.dataset.user),select=row.querySelector("select"),active=row.querySelector(".profile-active"),name=row.querySelector(".profile-name"),phone=row.querySelector(".profile-phone"),button=row.querySelector(".save-user"),pointsButton=row.querySelector(".manage-points");
     const save=async()=>{
       button.disabled=true;select.disabled=true;active.disabled=true;name.disabled=true;phone.disabled=true;
       const {error:updateError}=await sb.from("user_access").update({full_name:name.value.trim()||null,phone:phone.value.trim()||null,role:select.value,active:active.checked}).eq("user_id",row.dataset.user);
       button.disabled=false;select.disabled=false;active.disabled=false;name.disabled=false;phone.disabled=false;
       if(updateError){setAccessMessage(updateError.message,true);await loadAccessUsers();return;}
       setAccessMessage("Perfil e permissão atualizados.");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
-      if(row.dataset.user===currentUser.id) await refreshAccessSession();
+      if(row.dataset.user===currentUser.id) await refreshAccessSession();else await loadAccessUsers();
     };
-    button.onclick=save;
+    button.onclick=save;if(pointsButton)pointsButton.onclick=()=>openPointAccess(user);
   });
 }
 async function initAccess(){
-  $("btnAccess").onclick=openAccessModal;$("closeAccess").onclick=closeAccessModal;
+  $("btnAccess").onclick=openAccessModal;$("gateAccess").onclick=openAccessModal;$("closeAccess").onclick=closeAccessModal;
   $("accessModal").onclick=e=>{if(e.target===$("accessModal"))closeAccessModal();};
   $("loginAccess").onclick=async()=>{
     const email=$("accessEmail").value.trim(),password=$("accessPassword").value;
     if(!email||!password){setAccessMessage("Informe e-mail e senha.",true);return;}
     setAccessMessage("Entrando…");const {error}=await sb.auth.signInWithPassword({email,password});
     if(error){setAccessMessage("Não foi possível entrar: "+error.message,true);return;}
-    await refreshAccessSession();setAccessMessage("Acesso realizado com sucesso.");
+    const allowed=await refreshAccessSession();if(allowed){setAccessMessage("Acesso realizado com sucesso.");await loadProtectedData(false);closeAccessModal();}
+  };
+  $("requestAccess").onclick=async()=>{
+    const name=$("requestAccessName").value.trim(),phone=$("requestAccessPhone").value.trim(),email=$("accessEmail").value.trim(),password=$("accessPassword").value;
+    if(!name||!email||password.length<8){setAccessMessage("Informe nome, e-mail e uma senha com pelo menos 8 caracteres.",true);return;}
+    setAccessMessage("Enviando solicitação…");const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,phone},emailRedirectTo:location.origin+location.pathname}});
+    if(error){setAccessMessage("Não foi possível solicitar: "+error.message,true);return;}
+    if(data.session)await sb.auth.signOut({scope:"local"});
+    setAccessMessage("Solicitação criada. Confirme o e-mail, se solicitado, e aguarde a aprovação do Administrador.");
   };
   $("createAccessUser").onclick=async()=>{
     if(!requireAdmin())return;
-    const button=$("createAccessUser"),payload={action:"create",full_name:$("newAccessName").value.trim(),phone:$("newAccessPhone").value.trim(),email:$("newAccessEmail").value.trim(),password:$("newAccessPassword").value,role:$("newAccessRole").value,active:$("newAccessActive").checked};
+    const button=$("createAccessUser"),payload={action:"create",full_name:$("newAccessName").value.trim(),phone:$("newAccessPhone").value.trim(),email:$("newAccessEmail").value.trim(),password:$("newAccessPassword").value,role:$("newAccessRole").value};
     if(!payload.full_name||!payload.email||payload.password.length<8){setAccessMessage("Informe nome, e-mail e uma senha temporária com pelo menos 8 caracteres.",true);return;}
     button.disabled=true;setAccessMessage("Criando conta…");
     const {data,error}=await sb.functions.invoke("admin-users",{body:payload});
     button.disabled=false;
     if(error){let message=error.message;try{const detail=await error.context.json();message=detail.error||message;}catch(_){}setAccessMessage("Não foi possível criar: "+message,true);return;}
-    $("newAccessName").value="";$("newAccessPhone").value="";$("newAccessEmail").value="";$("newAccessPassword").value="";$("newAccessRole").value="viewer";$("newAccessActive").checked=true;
-    setAccessMessage("Conta criada para "+(data.user&&data.user.email||payload.email)+".");await loadAccessUsers();
+    $("newAccessName").value="";$("newAccessPhone").value="";$("newAccessEmail").value="";$("newAccessPassword").value="";$("newAccessRole").value="viewer";
+    setAccessMessage("Conta pendente criada para "+(data.user&&data.user.email||payload.email)+". Configure os pontos e aprove o acesso.");await loadAccessUsers();
   };
   $("resetAccess").onclick=async()=>{
     const email=$("accessEmail").value.trim();if(!email){setAccessMessage("Informe o e-mail para recuperar a senha.",true);return;}
     const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
     setAccessMessage(error?"Não foi possível enviar: "+error.message:"E-mail de recuperação enviado.",!!error);
   };
-  $("logoutAccess").onclick=async()=>{await sb.auth.signOut();await refreshAccessSession();closeAccessModal();toast("Acesso encerrado.","ok");};
+  $("logoutAccess").onclick=async()=>{await sb.auth.signOut();await refreshAccessSession();clearProtectedState();closeAccessModal();toast("Acesso encerrado.","ok");};
   $("refreshAccess").onclick=loadAccessUsers;
-  sb.auth.onAuthStateChange(()=>setTimeout(refreshAccessSession,0));
-  await refreshAccessSession();
+  $("closePointAccess").onclick=()=>{$("pointAccessEditor").hidden=true;pointAccessUser=null;};
+  $("pointAccessSearch").oninput=renderPointAccessOptions;
+  $("selectVisiblePoints").onclick=()=>{const filtered=filteredPointCatalog();filtered.preventivas.forEach(p=>selectedPreventivaIds.add(p.id));filtered.notifications.forEach(n=>selectedNotificationIds.add(n.id));renderPointAccessOptions();};
+  $("clearUserPoints").onclick=()=>{selectedPreventivaIds.clear();selectedNotificationIds.clear();renderPointAccessOptions();};
+  $("savePointAccess").onclick=savePointAccess;
+  sb.auth.onAuthStateChange(()=>setTimeout(async()=>{const allowed=await refreshAccessSession();if(allowed&&!protectedDataLoaded)await loadProtectedData(true);if(!allowed)clearProtectedState();},0));
+  const allowed=await refreshAccessSession();if(allowed)await loadProtectedData(false);else clearProtectedState();
 }
 function labelIconButtons(root){
   root.querySelectorAll("button.icon-btn[title]").forEach(button=>button.setAttribute("aria-label",button.title));
@@ -1468,6 +1564,7 @@ function populateMainFolderSelect(entries){
     ).join("");
 }
 async function loadMainFolderFromCloud(){
+  if(!canAdmin())return;
   try{
     const {data:rootEntries,error}=await sb.storage.from(KMZ_BUCKET).list("",{limit:1000});
     if(error) throw error;
@@ -1633,15 +1730,19 @@ function cacheOpen(){
   });
 }
 async function cacheSet(key,value){
+  if(!currentUser)return;
   try{
     const db=await withTimeout(cacheOpen(),1500);
-    await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readwrite"); tx.objectStore(CACHE_STORE).put(value,key); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); }),1500);
+    const scopedKey=currentUser.id+":"+key;
+    await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readwrite"); tx.objectStore(CACHE_STORE).put(value,scopedKey); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); }),1500);
   }catch(e){ console.warn("cacheSet",key,e); }
 }
 async function cacheGet(key){
+  if(!currentUser)return null;
   try{
     const db=await withTimeout(cacheOpen(),1500);
-    return await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readonly"); const req=tx.objectStore(CACHE_STORE).get(key); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }),1500);
+    const scopedKey=currentUser.id+":"+key;
+    return await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readonly"); const req=tx.objectStore(CACHE_STORE).get(scopedKey); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }),1500);
   }catch(e){ console.warn("cacheGet",key,e); return null; }
 }
 
@@ -1656,6 +1757,7 @@ async function withRetry(queryFn, tries, delayMs){
   return res;
 }
 async function loadAll(silent){
+  if(!hasContentAccess()){clearProtectedState();return;}
   silent=!!silent;
   $("btnReload") && ($("btnReload").disabled=true);
   const [mainsRes,prevRes,filesRes,notifRes,settingsRes]=await Promise.all([
@@ -1707,6 +1809,21 @@ async function loadAll(silent){
     if(!silent&&(state.mains.length||state.preventivas.length||state.notifications.length)) toast("Dados compartilhados carregados do Supabase.","ok");
   }
   $("btnReload") && ($("btnReload").disabled=false);
+  protectedDataLoaded=true;
+}
+
+function clearProtectedState(){
+  Object.values(mainLayerGroups).forEach(layer=>map.hasLayer(layer)&&map.removeLayer(layer));
+  Object.values(prevLayerGroups).forEach(layer=>map.hasLayer(layer)&&map.removeLayer(layer));
+  Object.keys(mainLayerGroups).forEach(key=>delete mainLayerGroups[key]);Object.keys(prevLayerGroups).forEach(key=>delete prevLayerGroups[key]);
+  notifLayerGroup.clearLayers();Object.keys(notifMarkers).forEach(key=>delete notifMarkers[key]);mainPointMarkers=[];mainAssets=[];
+  state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:50,highlight:true,showLabels:true,showCTO:true,showCEO:true,showNotifications:true};
+  protectedDataLoaded=false;renderMain();refresh();setSaveBadge(false);
+}
+async function loadProtectedData(silent){
+  if(!hasContentAccess())return;
+  await loadAll(!!silent);
+  if(canAdmin())await loadMainFolderFromCloud();
 }
 
 /* Sincroniza mudanças feitas em qualquer dispositivo. O canal em tempo real
@@ -1714,6 +1831,7 @@ async function loadAll(silent){
    o Realtime ainda não esteja habilitado para alguma tabela. */
 let sharedReloadTimer=0;
 function scheduleSharedReload(delay){
+  if(!hasContentAccess())return;
   clearTimeout(sharedReloadTimer);
   sharedReloadTimer=setTimeout(()=>{
     if(document.visibilityState==="visible"&&navigator.onLine) loadAll(true);
@@ -1795,10 +1913,7 @@ $("expCsv").onclick=()=>{
 /* ============ Start ============ */
 $("lightbox").onclick=()=>$("lightbox").classList.remove("show");
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){$("lightbox").classList.remove("show");closeAccessModal();}});
-initAccess().catch(error=>{console.warn("initAccess",error);currentUser=null;currentRole="public";applyPermissions();}).finally(()=>{
-  loadAll();
-  loadMainFolderFromCloud();
-});
+initAccess().catch(error=>{console.warn("initAccess",error);currentUser=null;currentRole="public";applyPermissions();clearProtectedState();});
 setTimeout(()=>map.invalidateSize(),300);
 window.addEventListener("resize",syncMapLayout);
 /* Alguns Windows/Chrome deixam uma faixa da página sem repintar depois de

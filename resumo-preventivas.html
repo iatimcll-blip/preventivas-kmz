@@ -97,7 +97,7 @@
 const SUPABASE_URL="https://hhwghwqynrxrksrzjvgc.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-let preventivas=[],loading=false,queuedLoad=false;
+let preventivas=[],loading=false,queuedLoad=false,canLoad=false;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function haversine(aLat,aLng,bLat,bLng){const R=6371000,toR=Math.PI/180,dLat=(bLat-aLat)*toR,dLng=(bLng-aLng)*toR;const x=Math.sin(dLat/2)**2+Math.cos(aLat*toR)*Math.cos(bLat*toR)*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
@@ -136,6 +136,7 @@ function render(){
     </article>`;}).join("");
 }
 async function load(silent){
+  if(!canLoad)return;
   silent=!!silent;
   if(loading){queuedLoad=true;return;}
   loading=true;$("reload").disabled=true;
@@ -151,6 +152,7 @@ async function load(silent){
 }
 let summaryReloadTimer=0;
 function scheduleSummaryReload(delay){
+  if(!canLoad)return;
   clearTimeout(summaryReloadTimer);
   summaryReloadTimer=setTimeout(()=>{if(document.visibilityState==="visible"&&navigator.onLine)load(true);},delay==null?700:delay);
 }
@@ -163,7 +165,22 @@ document.addEventListener("visibilitychange",()=>{if(document.visibilityState===
 window.addEventListener("focus",()=>scheduleSummaryReload(150));
 window.addEventListener("online",()=>scheduleSummaryReload(150));
 window.addEventListener("pageshow",event=>{if(event.persisted)scheduleSummaryReload(150);});
-$("search").addEventListener("input",render);$("reload").onclick=()=>load(false);load(false);
+async function initSummaryAccess(){
+  const {data:{session}}=await db.auth.getSession();
+  if(!session){
+    $("sync").textContent="Acesso necessário";$("reload").disabled=true;
+    $("list").innerHTML='<div class="empty error">Este conteúdo é protegido. <a class="btn" href="index.html" style="margin-top:12px">Entrar ou solicitar acesso</a></div>';
+    return;
+  }
+  const {data,error}=await db.from("user_access").select("active").eq("user_id",session.user.id).maybeSingle();
+  if(error||!data?.active){
+    $("sync").textContent="Aguardando aprovação";$("reload").disabled=true;
+    $("list").innerHTML='<div class="empty error">Sua conta ainda não foi aprovada pelo Administrador. <a class="btn" href="index.html" style="margin-top:12px">Voltar ao acesso</a></div>';
+    return;
+  }
+  canLoad=true;load(false);
+}
+$("search").addEventListener("input",render);$("reload").onclick=()=>load(false);initSummaryAccess();
 </script>
 </body>
 </html>
