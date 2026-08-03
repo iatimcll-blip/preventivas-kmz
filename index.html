@@ -1282,15 +1282,22 @@ async function loadMainFolderFromCloud(){
 $("btnClearMainSelection").onclick=()=>{
   const sel=$("mainFolderSelect");
   const selected=Array.from(sel.selectedOptions);
-  if(!selected.length){
-    toast("Nenhum arquivo está selecionado.","err");
-    return;
-  }
   selected.forEach(option=>option.selected=false);
   sel.selectedIndex=-1;
   sel.value="";
   sel.blur();
-  toast(selected.length+" seleção(ões) limpa(s).","ok");
+  Object.values(mainLayerGroups).forEach(layer=>map.removeLayer(layer));
+  Object.keys(mainLayerGroups).forEach(id=>delete mainLayerGroups[id]);
+  mainPointMarkers=[];
+  mainAssets=[];
+  const clearedMains=state.mains.length;
+  state.mains=[];
+  refresh();
+  if(selected.length||clearedMains){
+    toast("Seleções e visualização da rede principal limpas. Use Recarregar para restaurar.","ok");
+  }else{
+    toast("Nenhuma seleção ou rede principal para limpar.","err");
+  }
 };
 $("btnLoadSelectedMains").onclick=async()=>{
   const sel=$("mainFolderSelect");
