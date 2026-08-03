@@ -1224,7 +1224,10 @@ function wireDrop(zone,input,handler){
     }
   };
   input.onchange=async e=>{
-    const files=e.target.files;
+    // FileList é "vivo": limpar o input também esvazia a mesma referência.
+    // Copiamos os arquivos antes para garantir que o upload selecionado siga
+    // para leitura, renderização e persistência.
+    const files=Array.from(e.target.files||[]);
     input.value="";
     if(!files.length) return;
     try{ await handler(files); } finally { collapsePanelsAfterAction(); }
