@@ -252,6 +252,7 @@
   .access-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}.access-head h3{margin:0;font-size:18px}.access-head p{margin:4px 0 0;color:var(--ink-3);font-size:11px;line-height:1.45}.access-head .icon-btn{margin-left:auto;flex:0 0 auto}
   .access-form{display:grid;gap:10px}.access-form .btn-row{flex-wrap:wrap}.access-form .btn{flex:1 1 130px}.access-message{min-height:18px;margin-top:8px;color:var(--ink-3);font-size:11px;line-height:1.45}
   .access-user{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}.access-user b{display:block;font-size:13px;overflow-wrap:anywhere}.access-user small{color:var(--ink-3)}
+  .pending-badge{display:inline-grid;place-items:center;min-width:19px;height:19px;margin-left:2px;padding:0 5px;border-radius:10px;background:var(--danger);color:#fff;font:800 10px var(--mono);box-shadow:0 0 0 2px #13232d}.pending-badge[hidden],.pending-alert[hidden]{display:none!important}.pending-alert{margin-top:12px;padding:10px 12px;border:1px solid #6b4c16;border-radius:9px;background:#2a200d;color:#ffd98a;font-size:11px;line-height:1.45}.pending-alert b{color:#ffe9b4}
   .access-create{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0a141c}.access-create h4{grid-column:1/-1;margin:0;color:var(--optic);font-size:12px}.access-create .wide{grid-column:1/-1}.access-create .btn{grid-column:1/-1}
   .access-list{display:grid;gap:8px;margin-top:12px}.access-list-title{margin:16px 0 0;font-size:12px;color:var(--ink-2)}.access-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0a141c}.access-row .email{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink-3)}.access-row .profile-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.access-row select{min-width:0}.access-row label{font-size:10px;color:var(--ink-2)}.access-row .save-user{min-width:76px}.access-row .status{grid-column:1/-1;font:700 10px var(--mono);color:var(--warn)}.access-row .status.approved{color:var(--done)}.access-row .manage-points{grid-column:1/-1}
   .point-editor{margin-top:12px;padding:12px;border:1px solid var(--optic-dim);border-radius:10px;background:#07151b}.point-editor-head{display:flex;align-items:flex-start;gap:8px}.point-editor-head h4{margin:0;font-size:13px;color:var(--optic)}.point-editor-head small{display:block;margin-top:3px;color:var(--ink-3)}.point-editor-head .icon-btn{margin-left:auto}.point-tools{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.point-tools .btn{flex:1 1 120px}.point-results{display:grid;gap:6px;max-height:300px;overflow:auto;padding-right:3px}.point-group{margin:10px 0 5px;color:var(--ink-2);font:700 10px var(--mono);text-transform:uppercase}.point-option{display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#0a141c;font-size:11px;line-height:1.35}.point-option input{margin-top:2px;flex:0 0 auto}.point-option span{min-width:0;overflow-wrap:anywhere}.point-note{margin:7px 0;color:var(--ink-3);font-size:10px}
@@ -268,7 +269,7 @@
     background:#12202a;border:1px solid var(--line);border-left:3px solid var(--optic);border-radius:9px;
     padding:11px 15px;font-size:13px;box-shadow:0 12px 40px -12px #000;opacity:0;pointer-events:none;transition:.25s;max-width:70vw}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  #toast.err{border-left-color:var(--danger)} #toast.ok{border-left-color:var(--done)}
+  #toast.err{border-left-color:var(--danger)} #toast.ok{border-left-color:var(--done)} #toast.warn{border-left-color:var(--warn)}
 
   .leaflet-container{background:#050809}
   .save-badge{font-size:10px;color:var(--ink-3);display:flex;align-items:center;gap:5px;justify-content:center;padding-top:2px}
@@ -354,7 +355,7 @@
   </button>
   <button class="btn" id="btnAccess" type="button" aria-label="Entrar ou gerenciar acessos">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
-    <span id="accessLabel">Entrar</span>
+    <span id="accessLabel">Entrar</span><span class="pending-badge" id="pendingAccessBadge" hidden>0</span>
   </button>
   <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Conectando ao Supabase</div>
   <aside>
@@ -478,6 +479,7 @@
       <div class="access-user"><b id="accessUserEmail"></b><small id="accessRoleText"></small></div>
       <div class="btn-row" style="margin-top:10px"><button class="btn" id="logoutAccess" type="button">Sair</button><button class="btn" id="refreshAccess" type="button" hidden>Atualizar usuários</button></div>
       <div id="adminAccessPanel" hidden>
+        <div class="pending-alert" id="pendingAccessAlert" hidden><b id="pendingAccessText"></b><br>Abra uma conta pendente, configure os pontos permitidos e marque “Aprovado”.</div>
         <div class="access-create">
           <h4>Criar nova conta</h4>
           <div class="field"><label>Nome completo</label><input id="newAccessName" type="text" maxlength="120" placeholder="Nome do usuário"></div>
@@ -520,7 +522,7 @@ let publicSyncChannel=null;
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
-let currentUser=null,currentRole="public",protectedDataLoaded=false;
+let currentUser=null,currentRole="public",protectedDataLoaded=false,pendingAccessCount=0,pendingNoticeShown=false;
 let pointAccessUser=null,pointAccessCatalog={preventivas:[],notifications:[]},selectedPreventivaIds=new Set(),selectedNotificationIds=new Set();
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
@@ -688,6 +690,27 @@ function applyPermissions(){
   $("adminAccessPanel").hidden=!canAdmin();$("refreshAccess").hidden=!canAdmin();
   if(currentUser){$("accessUserEmail").textContent=currentUser.email||"Usuário";$("accessRoleText").textContent="Perfil: "+roleNames[currentRole];}
   document.querySelectorAll("#prevList input").forEach(input=>input.disabled=!canEdit());
+  if(!canAdmin())clearPendingAccessNotice();
+}
+function clearPendingAccessNotice(){
+  pendingAccessCount=0;pendingNoticeShown=false;$("pendingAccessBadge").hidden=true;$("pendingAccessAlert").hidden=true;$("btnAccess").setAttribute("aria-label","Entrar ou gerenciar acessos");
+}
+async function refreshPendingAccess(announce){
+  if(!canAdmin()){clearPendingAccessNotice();return;}
+  const previous=pendingAccessCount;
+  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,created_at").eq("active",false).is("approved_at",null).order("created_at",{ascending:false});
+  if(error){console.warn("pending access",error);return;}
+  pendingAccessCount=(data||[]).length;
+  const badge=$("pendingAccessBadge"),alert=$("pendingAccessAlert"),label=pendingAccessCount+" cadastro"+(pendingAccessCount===1?"":"s")+" aguardando aprovação";
+  badge.textContent=pendingAccessCount>99?"99+":String(pendingAccessCount);badge.hidden=pendingAccessCount===0;
+  alert.hidden=pendingAccessCount===0;$("pendingAccessText").textContent=label.charAt(0).toUpperCase()+label.slice(1)+".";
+  $("btnAccess").setAttribute("aria-label",pendingAccessCount?"Gerenciar acessos — "+label:"Gerenciar acessos");
+  if(!pendingAccessCount){pendingNoticeShown=false;return;}
+  if(announce&&(!pendingNoticeShown||pendingAccessCount>previous)){
+    const newest=(data||[])[0],person=newest&&(newest.full_name||newest.email);
+    toast(pendingAccessCount===1?"Novo cadastro aguardando aprovação"+(person?": "+person:"")+".":label.charAt(0).toUpperCase()+label.slice(1)+".","warn");
+    pendingNoticeShown=true;
+  }
 }
 async function refreshAccessSession(){
   const {data:{session}}=await sb.auth.getSession();
@@ -698,6 +721,7 @@ async function refreshAccessSession(){
     else if(data&&!data.active){await sb.auth.signOut({scope:"local"});currentUser=null;setAccessMessage("Sua solicitação está aguardando aprovação do Administrador.",true);}
   }
   applyPermissions();
+  if(canAdmin())await refreshPendingAccess(false);
   return hasContentAccess();
 }
 function pointLabel(notification){return [notification.os,notification.name,notification.municipio].filter(Boolean).join(" — ")||notification.id;}
@@ -762,7 +786,7 @@ async function savePointAccess(){
 async function loadAccessUsers(){
   if(!canAdmin())return;
   $("accessList").innerHTML='<div class="empty">Carregando usuários…</div>';
-  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,phone,role,active,approved_at,created_at").order("created_at");
+  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,phone,role,active,approved_at,created_at").order("active",{ascending:true}).order("created_at",{ascending:false});
   if(error){setAccessMessage("Não foi possível carregar os usuários: "+error.message,true);return;}
   $("accessList").innerHTML=(data||[]).map(user=>{const status=user.active?"Aprovado":user.approved_at?"Acesso suspenso":"Aguardando aprovação";return `<div class="access-row" data-user="${esc(user.user_id)}"><div class="email" title="${esc(user.email)}">${esc(user.email)}</div><div class="status${user.active?" approved":""}">${status}</div><div class="profile-fields"><div class="field"><label>Nome</label><input class="profile-name" type="text" maxlength="120" value="${esc(user.full_name||"")}" placeholder="Nome completo"></div><div class="field"><label>Telefone</label><input class="profile-phone" type="tel" maxlength="40" value="${esc(user.phone||"")}" placeholder="Telefone"></div></div><select aria-label="Perfil de ${esc(user.email)}"><option value="viewer"${user.role==="viewer"?" selected":""}>Visualizador</option><option value="editor"${user.role==="editor"?" selected":""}>Editor</option><option value="admin"${user.role==="admin"?" selected":""}>Administrador</option></select><label><input class="profile-active" type="checkbox"${user.active?" checked":""}> Aprovado</label><button class="btn save-user" type="button">Salvar</button>${user.role==="viewer"?'<button class="btn manage-points" type="button">Configurar preventivas e pontos</button>':""}</div>`;}).join("")||'<div class="empty">Nenhum usuário cadastrado.</div>';
   $("accessList").querySelectorAll(".access-row").forEach(row=>{
@@ -773,7 +797,7 @@ async function loadAccessUsers(){
       button.disabled=false;select.disabled=false;active.disabled=false;name.disabled=false;phone.disabled=false;
       if(updateError){setAccessMessage(updateError.message,true);await loadAccessUsers();return;}
       setAccessMessage("Perfil e permissão atualizados.");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
-      if(row.dataset.user===currentUser.id) await refreshAccessSession();else await loadAccessUsers();
+      if(row.dataset.user===currentUser.id) await refreshAccessSession();else{await refreshPendingAccess(false);await loadAccessUsers();}
     };
     button.onclick=save;if(pointsButton)pointsButton.onclick=()=>openPointAccess(user);
   });
@@ -805,7 +829,7 @@ async function initAccess(){
     button.disabled=false;
     if(error){let message=error.message;try{const detail=await error.context.json();message=detail.error||message;}catch(_){}setAccessMessage("Não foi possível criar: "+message,true);return;}
     $("newAccessName").value="";$("newAccessPhone").value="";$("newAccessEmail").value="";$("newAccessPassword").value="";$("newAccessRole").value="viewer";
-    setAccessMessage("Conta pendente criada para "+(data.user&&data.user.email||payload.email)+". Configure os pontos e aprove o acesso.");await loadAccessUsers();
+    setAccessMessage("Conta pendente criada para "+(data.user&&data.user.email||payload.email)+". Configure os pontos e aprove o acesso.");await refreshPendingAccess(true);await loadAccessUsers();
   };
   $("resetAccess").onclick=async()=>{
     const email=$("accessEmail").value.trim();if(!email){setAccessMessage("Informe o e-mail para recuperar a senha.",true);return;}
@@ -1823,7 +1847,7 @@ function clearProtectedState(){
 async function loadProtectedData(silent){
   if(!hasContentAccess())return;
   await loadAll(!!silent);
-  if(canAdmin())await loadMainFolderFromCloud();
+  if(canAdmin()){await loadMainFolderFromCloud();await refreshPendingAccess(true);}
 }
 
 /* Sincroniza mudanças feitas em qualquer dispositivo. O canal em tempo real
@@ -1839,9 +1863,11 @@ function scheduleSharedReload(delay){
 }
 publicSyncChannel=sb.channel("jarvis-public-sync")
   .on("postgres_changes",{event:"*",schema:"public"},()=>scheduleSharedReload(500))
+  .on("postgres_changes",{event:"*",schema:"public",table:"user_access"},()=>{if(canAdmin()){refreshPendingAccess(true);if($("accessModal").classList.contains("show"))loadAccessUsers();}})
   .on("broadcast",{event:"data-changed"},()=>scheduleSharedReload(300));
 publicSyncChannel.subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")console.warn("Realtime indisponível; sincronização periódica ativa.");});
 setInterval(()=>scheduleSharedReload(0),30000);
+setInterval(()=>{if(canAdmin())refreshPendingAccess(true);},30000);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")scheduleSharedReload(150);});
 window.addEventListener("focus",()=>scheduleSharedReload(150));
 window.addEventListener("online",()=>scheduleSharedReload(150));
