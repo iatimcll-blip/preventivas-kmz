@@ -1281,8 +1281,16 @@ async function loadMainFolderFromCloud(){
 }
 $("btnClearMainSelection").onclick=()=>{
   const sel=$("mainFolderSelect");
-  Array.from(sel.options).forEach(option=>option.selected=false);
-  toast("Seleções limpas.","ok");
+  const selected=Array.from(sel.selectedOptions);
+  if(!selected.length){
+    toast("Nenhum arquivo está selecionado.","err");
+    return;
+  }
+  selected.forEach(option=>option.selected=false);
+  sel.selectedIndex=-1;
+  sel.value="";
+  sel.blur();
+  toast(selected.length+" seleção(ões) limpa(s).","ok");
 };
 $("btnLoadSelectedMains").onclick=async()=>{
   const sel=$("mainFolderSelect");
