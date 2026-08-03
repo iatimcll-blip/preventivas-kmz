@@ -93,8 +93,8 @@
   .block > h2 .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--optic);letter-spacing:0}
   .block .body{display:none}
   .block.open .body{
-    display:block;position:absolute;top:38px;left:0;width:min(380px,calc(100vw - 28px));max-height:min(470px,calc(100vh - 150px));
-    overflow:auto;padding:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;box-shadow:0 18px 35px #000a;
+    display:block;position:absolute;top:38px;left:0;width:min(380px,calc(100vw - 28px));
+    overflow:visible;padding:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;box-shadow:0 18px 35px #000a;
   }
   /* A rede principal é carregada exclusivamente pelo seletor suspenso. */
   #dropMain,#mainEmpty,#mainLoaded,#assetSearchRow,#btnLoadSelectedMains{display:none!important}
@@ -130,7 +130,7 @@
   .icon-btn svg{width:15px;height:15px}
 
   /* preventiva rows */
-  .prev-list{display:flex;flex-direction:column;gap:8px;max-height:150px;overflow-y:auto;padding-right:4px}
+  .prev-list{display:flex;flex-direction:column;gap:8px;overflow:visible;padding-right:0}
   .prev-list::-webkit-scrollbar{width:9px}
   .prev-list::-webkit-scrollbar-thumb{background:#22323f;border-radius:9px;border:2px solid var(--panel-2)}
   .prev{border:1px solid var(--line);border-radius:9px;background:#0e1922;overflow:hidden}
@@ -260,7 +260,7 @@
     :root{--side:100%}
     aside{flex-basis:auto}
     .scroll{padding:0}
-    .block.open .body{position:fixed;top:114px;left:10px;width:calc(100vw - 20px);max-height:calc(100vh - 130px)}
+    .block.open .body{position:fixed;top:114px;left:10px;width:calc(100vw - 20px);overflow:visible}
     #map{flex:1;min-height:280px}
     .kpis{display:none}
   }
@@ -503,6 +503,10 @@ function closePanels(except){
     }
   });
 }
+function collapsePanelsAfterAction(){
+  closePanels();
+  syncMapLayout();
+}
 panelBlocks.forEach((block,index)=>{
   const trigger=block.querySelector("h2");
   const body=block.querySelector(".body");
@@ -523,8 +527,8 @@ panelBlocks.forEach((block,index)=>{
   trigger.onclick=toggle;
   trigger.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();} };
 });
-document.addEventListener("click",e=>{ if(!e.target.closest(".scroll > .block")){closePanels();syncMapLayout();} });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){closePanels();syncMapLayout();} });
+document.addEventListener("click",e=>{ if(!e.target.closest(".scroll > .block")) collapsePanelsAfterAction(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") collapsePanelsAfterAction(); });
 function toast(msg,type){const t=$("toast");t.textContent=msg;t.className="show "+(type||"");clearTimeout(t._t);t._t=setTimeout(()=>t.className="",3200);}
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -1209,10 +1213,18 @@ function wireDrop(zone,input,handler){
       input.click();
     }
   };
-  input.onchange=e=>{ if(e.target.files.length)handler(e.target.files); input.value=""; };
+  input.onchange=async e=>{
+    const files=e.target.files;
+    input.value="";
+    if(!files.length) return;
+    try{ await handler(files); } finally { collapsePanelsAfterAction(); }
+  };
   ["dragenter","dragover"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add("hot");}));
   ["dragleave","drop"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove("hot");}));
-  zone.addEventListener("drop",e=>{ if(e.dataTransfer.files.length)handler(e.dataTransfer.files); });
+  zone.addEventListener("drop",async e=>{
+    if(!e.dataTransfer.files.length) return;
+    try{ await handler(e.dataTransfer.files); } finally { collapsePanelsAfterAction(); }
+  });
 }
 wireDrop($("dropMain"),$("fileMain"),f=>addMain(f));
 wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
@@ -1275,7 +1287,11 @@ $("btnLoadSelectedMains").onclick=async()=>{
       files.push(new File([data],p.name));
     }
     if(files.length){ btn.textContent="Processando no mapa…"; await replaceMains(files); }
-  } finally { btn.disabled=false; btn.textContent=btnTextOrig; }
+  } finally {
+    btn.disabled=false;
+    btn.textContent=btnTextOrig;
+    collapsePanelsAfterAction();
+  }
 };
 async function replaceMains(files){
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
