@@ -69,6 +69,7 @@
     overflow-x:auto;white-space:nowrap;
   }
   .toolbar .btn{width:auto;flex:0 0 auto;padding:7px 10px;font-size:11px}
+  .toolbar a.btn{text-decoration:none}
   .toolbar .btn svg{width:14px;height:14px}
   .toolbar .save-badge{flex:0 0 auto;margin-left:0!important;padding-top:0}
 
@@ -204,28 +205,6 @@
   .map-btns button.active{border-color:var(--optic);color:var(--optic)}
   .map-btns svg{width:17px;height:17px}
 
-  /* lista permanente das preventivas, sobre o lado esquerdo do mapa */
-  .prev-map-list{position:absolute;left:58px;top:12px;z-index:650;width:min(310px,calc(100% - 126px));
-    max-height:calc(100% - 36px);display:flex;flex-direction:column;background:#0d1720f2;backdrop-filter:blur(7px);
-    border:1px solid var(--line);border-radius:11px;box-shadow:0 14px 34px -16px #000;overflow:hidden}
-  .prev-map-head{padding:10px 11px 8px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#13212b,#0e1820)}
-  .prev-map-head strong{display:block;font-size:11px;letter-spacing:.7px;text-transform:uppercase;color:var(--ink)}
-  .prev-map-head span{display:block;margin-top:2px;font:10.5px var(--mono);color:var(--optic)}
-  .prev-map-items{display:flex;flex-direction:column;gap:6px;padding:8px;overflow-y:auto;overscroll-behavior:contain}
-  .prev-map-items::-webkit-scrollbar{width:7px}
-  .prev-map-items::-webkit-scrollbar-thumb{background:#29404e;border-radius:8px}
-  .prev-map-item{width:100%;display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:7px;align-items:start;
-    padding:8px;border:1px solid var(--line-soft);border-radius:8px;background:#0b141c;color:var(--ink);text-align:left;
-    font:inherit;cursor:pointer;transition:.12s}
-  .prev-map-item:hover,.prev-map-item:focus-visible{border-color:var(--optic);background:#10212a}
-  .prev-map-item.off{opacity:.55}
-  .prev-map-item .swatch{width:9px;height:9px;margin-top:3px}
-  .prev-map-item .info{min-width:0}
-  .prev-map-item .name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12px;font-weight:700}
-  .prev-map-item .meta{display:block;margin-top:3px;color:var(--ink-3);font-size:9.5px;line-height:1.35}
-  .prev-map-item .distance{font:700 12px var(--mono);color:var(--done);white-space:nowrap}
-  .prev-map-item .distance.none{color:var(--ink-3)}
-
   /* etiqueta "Preventiva + arquivo" fixa no mapa */
   .leaflet-tooltip.prev-tip{background:none;border:none;box-shadow:none;padding:0;white-space:nowrap;font:inherit}
   .leaflet-tooltip.prev-tip::before{display:none!important}
@@ -284,7 +263,6 @@
     .scroll{padding:0}
     .block.open .body{width:calc(100vw - 20px);overflow:visible}
     #map{flex:1;min-height:280px}
-    .prev-map-list{left:50px;top:8px;width:calc(100% - 108px);max-height:44%}
     .kpis{display:none}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -319,6 +297,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
     Relatório CSV
   </button>
+  <a class="btn" href="resumo-preventivas.html" aria-label="Abrir resumo das preventivas realizadas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+    Resumo Preventivas
+  </a>
   <button class="btn" id="clearAll">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
     Limpar tudo
@@ -425,13 +407,6 @@
 
 <div class="stage">
   <div id="map">
-    <aside class="prev-map-list" id="prevMapList" aria-label="Preventivas realizadas no mapa" style="display:none">
-      <div class="prev-map-head">
-        <strong>Preventivas realizadas</strong>
-        <span id="prevMapSummary">0 preventivas</span>
-      </div>
-      <div class="prev-map-items" id="prevMapItems"></div>
-    </aside>
     <div class="map-btns">
       <button id="btnSat" title="Alternar satélite / ruas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 0 1 20 0 10 10 0 0 1-20 0z"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></button>
       <button id="btnFit" title="Enquadrar tudo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -1005,8 +980,8 @@ function renderPrevList(){
     list.appendChild(el);
   });
 
-  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);renderPrevMapList();refreshLegend();sbCall(()=>sb.from('preventivas').update({name:p.name}).eq('id',p.id),"Erro ao salvar nome");}});
-  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){const f=e.target.dataset.field;p[f]=e.target.value;if(f==="date")renderPrev(p);renderPrevMapList();sbCall(()=>sb.from('preventivas').update({[f]:p[f]}).eq('id',p.id),"Erro ao salvar "+f);}});
+  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);refreshLegend();sbCall(()=>sb.from('preventivas').update({name:p.name}).eq('id',p.id),"Erro ao salvar nome");}});
+  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){const f=e.target.dataset.field;p[f]=e.target.value;if(f==="date")renderPrev(p);sbCall(()=>sb.from('preventivas').update({[f]:p[f]}).eq('id',p.id),"Erro ao salvar "+f);}});
   list.querySelectorAll("[data-act]").forEach(b=>b.onclick=e=>{
     const p=find(b.dataset.id); if(!p) return;
     const act=b.dataset.act;
@@ -1019,26 +994,6 @@ function renderPrevList(){
   });
 }
 const find=id=>state.preventivas.find(p=>p.id===id);
-
-function renderPrevMapList(){
-  const panel=$("prevMapList"), list=$("prevMapItems"), summary=$("prevMapSummary");
-  if(!state.preventivas.length){ panel.style.display="none"; list.innerHTML=""; return; }
-  panel.style.display="flex";
-  const total=state.preventivas.reduce((sum,p)=>sum+lineLength(p.geojson),0);
-  summary.textContent=state.preventivas.length+" preventiva"+(state.preventivas.length===1?"":"s")+" · "+(total>0?fmtDist(total):"sem trajeto");
-  list.innerHTML=state.preventivas.map(p=>{
-    const dist=lineLength(p.geojson), s=statsOf(p.geojson);
-    const details=[p.date||"Sem data",p.ga||"Sem responsável",s.pts+" ponto"+(s.pts===1?"":"s"),s.lin+" linha"+(s.lin===1?"":"s"),p.visible===false?"Oculta":"Visível"];
-    return '<button class="prev-map-item'+(p.visible===false?' off':'')+'" data-prev-zoom="'+p.id+'" title="Enquadrar '+esc(p.name)+' no mapa">'
-      +'<span class="swatch" style="background:'+p.color+'"></span>'
-      +'<span class="info"><span class="name">'+esc(p.name)+'</span><span class="meta">'+details.map(esc).join(' · ')+'</span></span>'
-      +'<span class="distance'+(dist>0?'':' none')+'">'+(dist>0?fmtDist(dist):'—')+'</span></button>';
-  }).join("");
-  list.querySelectorAll("[data-prev-zoom]").forEach(button=>button.onclick=()=>{
-    const layer=prevLayerGroups[button.dataset.prevZoom];
-    if(layer&&layer.getLayers().length){ const bounds=layer.getBounds(); if(bounds.isValid()) map.fitBounds(bounds,{padding:[55,55]}); }
-  });
-}
 
 function renderNotifFileList(){
   const empty=$("notifEmpty"), loaded=$("notifLoaded"), tag=$("notifTag"), statsBox=$("notifStats");
@@ -1122,7 +1077,6 @@ function refresh(){
   const cov=computeCoverage();
   coveragePerPrev();
   renderPrevList();
-  renderPrevMapList();
   renderNotifFileList();
   updateNotifStats();
   refreshLegend();
