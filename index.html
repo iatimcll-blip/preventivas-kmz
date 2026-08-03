@@ -316,6 +316,7 @@
             <label id="mainFolderLabel">Rede principal por UF — arquivos na nuvem (Ctrl/Cmd+clique para selecionar vários)</label>
             <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Carregando lista…</option></select>
             <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
+            <button class="btn" id="btnClearMainSelection" type="button" style="margin-top:7px">Limpar seleções</button>
           </div>
           <div class="drop" id="dropMain" role="button" tabindex="0" aria-label="Anexar arquivos KMZ ou KML da rede principal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
@@ -1278,6 +1279,11 @@ async function loadMainFolderFromCloud(){
     if(sel) sel.innerHTML='<option value="" disabled>Erro ao listar KMZ na nuvem.</option>';
   }
 }
+$("btnClearMainSelection").onclick=()=>{
+  const sel=$("mainFolderSelect");
+  Array.from(sel.options).forEach(option=>option.selected=false);
+  toast("Seleções limpas.","ok");
+};
 $("btnLoadSelectedMains").onclick=async()=>{
   const sel=$("mainFolderSelect");
   const picked=Array.from(sel.selectedOptions).map(o=>mainFolderFiles[o.value]).filter(Boolean);
