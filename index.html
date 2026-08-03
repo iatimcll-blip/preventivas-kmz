@@ -252,7 +252,8 @@
   .access-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}.access-head h3{margin:0;font-size:18px}.access-head p{margin:4px 0 0;color:var(--ink-3);font-size:11px;line-height:1.45}.access-head .icon-btn{margin-left:auto;flex:0 0 auto}
   .access-form{display:grid;gap:10px}.access-form .btn-row{flex-wrap:wrap}.access-form .btn{flex:1 1 130px}.access-message{min-height:18px;margin-top:8px;color:var(--ink-3);font-size:11px;line-height:1.45}
   .access-user{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}.access-user b{display:block;font-size:13px;overflow-wrap:anywhere}.access-user small{color:var(--ink-3)}
-  .access-list{display:grid;gap:8px;margin-top:12px}.access-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:9px;background:#0a141c}.access-row .email{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px}.access-row select{min-width:0}.access-row label{font-size:10px;color:var(--ink-2)}
+  .access-create{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0a141c}.access-create h4{grid-column:1/-1;margin:0;color:var(--optic);font-size:12px}.access-create .wide{grid-column:1/-1}.access-create .btn{grid-column:1/-1}
+  .access-list{display:grid;gap:8px;margin-top:12px}.access-list-title{margin:16px 0 0;font-size:12px;color:var(--ink-2)}.access-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0a141c}.access-row .email{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink-3)}.access-row .profile-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.access-row select{min-width:0}.access-row label{font-size:10px;color:var(--ink-2)}.access-row .save-user{min-width:76px}
   body[data-access="public"] #btnSavePrev,body[data-access="public"] #clearAll,body[data-access="public"] #dropPrev,body[data-access="public"] #dropNotif,body[data-access="public"] #mainFolderRow,
   body[data-access="viewer"] #btnSavePrev,body[data-access="viewer"] #clearAll,body[data-access="viewer"] #dropPrev,body[data-access="viewer"] #dropNotif,body[data-access="viewer"] #mainFolderRow{display:none!important}
   body[data-access="public"] .prev input,body[data-access="viewer"] .prev input{pointer-events:none;opacity:.72}
@@ -294,7 +295,7 @@
     .brand small{display:none}
     .leaflet-tooltip.prev-tip{display:none}
     .leaflet-popup-content{max-width:calc(100vw - 80px)}
-    .access-dialog{padding:15px}.access-row{grid-template-columns:1fr 98px}.access-row label{grid-column:1/-1}
+    .access-dialog{padding:15px}.access-create{grid-template-columns:1fr}.access-create h4,.access-create .wide,.access-create .btn{grid-column:1}.access-row{grid-template-columns:1fr 98px}.access-row .profile-fields{grid-template-columns:1fr}.access-row .save-user{grid-column:1/-1}.access-row label{align-self:center}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   :focus-visible{outline:2px solid var(--optic);outline-offset:2px}
@@ -457,13 +458,26 @@
     <div id="signedOutAccess" class="access-form">
       <div class="field"><label>E-mail</label><input id="accessEmail" type="email" autocomplete="username" placeholder="seu@email.com"></div>
       <div class="field"><label>Senha</label><input id="accessPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo de 6 caracteres"></div>
-      <div class="btn-row"><button class="btn primary" id="loginAccess" type="button">Entrar</button><button class="btn" id="signupAccess" type="button">Criar conta</button></div>
+      <div class="btn-row"><button class="btn primary" id="loginAccess" type="button">Entrar</button></div>
       <button class="btn" id="resetAccess" type="button">Recuperar senha</button>
     </div>
     <div id="signedInAccess" hidden>
       <div class="access-user"><b id="accessUserEmail"></b><small id="accessRoleText"></small></div>
       <div class="btn-row" style="margin-top:10px"><button class="btn" id="logoutAccess" type="button">Sair</button><button class="btn" id="refreshAccess" type="button" hidden>Atualizar usuários</button></div>
-      <div id="adminAccessPanel" hidden><div class="access-list" id="accessList"></div></div>
+      <div id="adminAccessPanel" hidden>
+        <div class="access-create">
+          <h4>Criar nova conta</h4>
+          <div class="field"><label>Nome completo</label><input id="newAccessName" type="text" maxlength="120" placeholder="Nome do usuário"></div>
+          <div class="field"><label>Telefone</label><input id="newAccessPhone" type="tel" maxlength="40" placeholder="(00) 00000-0000"></div>
+          <div class="field wide"><label>E-mail</label><input id="newAccessEmail" type="email" autocomplete="off" placeholder="usuario@email.com"></div>
+          <div class="field"><label>Senha temporária</label><input id="newAccessPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo de 8 caracteres"></div>
+          <div class="field"><label>Tipo de acesso</label><select id="newAccessRole"><option value="viewer">Visualizador</option><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>
+          <label class="switch wide"><input type="checkbox" id="newAccessActive" checked><span class="track"></span>Acesso ativo</label>
+          <button class="btn primary" id="createAccessUser" type="button">Criar conta e liberar acesso</button>
+        </div>
+        <h4 class="access-list-title">Contas cadastradas</h4>
+        <div class="access-list" id="accessList"></div>
+      </div>
     </div>
     <div class="access-message" id="accessMessage" aria-live="polite"></div>
   </div>
@@ -665,20 +679,20 @@ async function refreshAccessSession(){
 async function loadAccessUsers(){
   if(!canAdmin())return;
   $("accessList").innerHTML='<div class="empty">Carregando usuários…</div>';
-  const {data,error}=await sb.from("user_access").select("user_id,email,role,active,created_at").order("created_at");
+  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,phone,role,active,created_at").order("created_at");
   if(error){setAccessMessage("Não foi possível carregar os usuários: "+error.message,true);return;}
-  $("accessList").innerHTML=(data||[]).map(user=>`<div class="access-row" data-user="${esc(user.user_id)}"><div class="email" title="${esc(user.email)}">${esc(user.email)}</div><select aria-label="Perfil de ${esc(user.email)}"><option value="viewer"${user.role==="viewer"?" selected":""}>Visualizador</option><option value="editor"${user.role==="editor"?" selected":""}>Editor</option><option value="admin"${user.role==="admin"?" selected":""}>Administrador</option></select><label><input type="checkbox"${user.active?" checked":""}> Ativo</label></div>`).join("")||'<div class="empty">Nenhum usuário cadastrado.</div>';
+  $("accessList").innerHTML=(data||[]).map(user=>`<div class="access-row" data-user="${esc(user.user_id)}"><div class="email" title="${esc(user.email)}">${esc(user.email)}</div><div class="profile-fields"><div class="field"><label>Nome</label><input class="profile-name" type="text" maxlength="120" value="${esc(user.full_name||"")}" placeholder="Nome completo"></div><div class="field"><label>Telefone</label><input class="profile-phone" type="tel" maxlength="40" value="${esc(user.phone||"")}" placeholder="Telefone"></div></div><select aria-label="Perfil de ${esc(user.email)}"><option value="viewer"${user.role==="viewer"?" selected":""}>Visualizador</option><option value="editor"${user.role==="editor"?" selected":""}>Editor</option><option value="admin"${user.role==="admin"?" selected":""}>Administrador</option></select><label><input class="profile-active" type="checkbox"${user.active?" checked":""}> Ativo</label><button class="btn save-user" type="button">Salvar</button></div>`).join("")||'<div class="empty">Nenhum usuário cadastrado.</div>';
   $("accessList").querySelectorAll(".access-row").forEach(row=>{
-    const select=row.querySelector("select"),active=row.querySelector('input[type="checkbox"]');
+    const select=row.querySelector("select"),active=row.querySelector(".profile-active"),name=row.querySelector(".profile-name"),phone=row.querySelector(".profile-phone"),button=row.querySelector(".save-user");
     const save=async()=>{
-      select.disabled=true;active.disabled=true;
-      const {error:updateError}=await sb.from("user_access").update({role:select.value,active:active.checked}).eq("user_id",row.dataset.user);
-      select.disabled=false;active.disabled=false;
+      button.disabled=true;select.disabled=true;active.disabled=true;name.disabled=true;phone.disabled=true;
+      const {error:updateError}=await sb.from("user_access").update({full_name:name.value.trim()||null,phone:phone.value.trim()||null,role:select.value,active:active.checked}).eq("user_id",row.dataset.user);
+      button.disabled=false;select.disabled=false;active.disabled=false;name.disabled=false;phone.disabled=false;
       if(updateError){setAccessMessage(updateError.message,true);await loadAccessUsers();return;}
-      setAccessMessage("Permissão atualizada.");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
+      setAccessMessage("Perfil e permissão atualizados.");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
       if(row.dataset.user===currentUser.id) await refreshAccessSession();
     };
-    select.onchange=save;active.onchange=save;
+    button.onclick=save;
   });
 }
 async function initAccess(){
@@ -691,13 +705,16 @@ async function initAccess(){
     if(error){setAccessMessage("Não foi possível entrar: "+error.message,true);return;}
     await refreshAccessSession();setAccessMessage("Acesso realizado com sucesso.");
   };
-  $("signupAccess").onclick=async()=>{
-    const email=$("accessEmail").value.trim(),password=$("accessPassword").value;
-    if(!email||password.length<6){setAccessMessage("Informe um e-mail e uma senha com pelo menos 6 caracteres.",true);return;}
-    setAccessMessage("Criando conta…");const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
-    if(error){setAccessMessage("Não foi possível criar a conta: "+error.message,true);return;}
-    if(data.session){await refreshAccessSession();setAccessMessage("Conta criada. O perfil inicial é Visualizador.");}
-    else setAccessMessage("Conta criada. Confirme o e-mail recebido para entrar.");
+  $("createAccessUser").onclick=async()=>{
+    if(!requireAdmin())return;
+    const button=$("createAccessUser"),payload={action:"create",full_name:$("newAccessName").value.trim(),phone:$("newAccessPhone").value.trim(),email:$("newAccessEmail").value.trim(),password:$("newAccessPassword").value,role:$("newAccessRole").value,active:$("newAccessActive").checked};
+    if(!payload.full_name||!payload.email||payload.password.length<8){setAccessMessage("Informe nome, e-mail e uma senha temporária com pelo menos 8 caracteres.",true);return;}
+    button.disabled=true;setAccessMessage("Criando conta…");
+    const {data,error}=await sb.functions.invoke("admin-users",{body:payload});
+    button.disabled=false;
+    if(error){let message=error.message;try{const detail=await error.context.json();message=detail.error||message;}catch(_){}setAccessMessage("Não foi possível criar: "+message,true);return;}
+    $("newAccessName").value="";$("newAccessPhone").value="";$("newAccessEmail").value="";$("newAccessPassword").value="";$("newAccessRole").value="viewer";$("newAccessActive").checked=true;
+    setAccessMessage("Conta criada para "+(data.user&&data.user.email||payload.email)+".");await loadAccessUsers();
   };
   $("resetAccess").onclick=async()=>{
     const email=$("accessEmail").value.trim();if(!email){setAccessMessage("Informe o e-mail para recuperar a senha.",true);return;}
