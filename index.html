@@ -93,11 +93,11 @@
   .block > h2 .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--optic);letter-spacing:0}
   .block .body{display:none}
   .block.open .body{
-    display:block;position:absolute;top:38px;left:0;width:min(380px,calc(100vw - 28px));
+    display:block;position:fixed;top:0;left:0;z-index:3000;width:min(400px,calc(100vw - 20px));
     overflow:visible;padding:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;box-shadow:0 18px 35px #000a;
   }
   /* A rede principal é carregada exclusivamente pelo seletor suspenso. */
-  #dropMain,#mainEmpty,#mainLoaded,#assetSearchRow,#btnLoadSelectedMains{display:none!important}
+  #dropMain,#mainEmpty,#mainLoaded,#assetSearchRow{display:none!important}
   .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
   .dot.optic{background:var(--optic);box-shadow:0 0 8px -1px var(--optic)}
   .dot.done{background:var(--done)} .dot.warn{background:var(--warn)}
@@ -260,7 +260,7 @@
     :root{--side:100%}
     aside{flex-basis:auto}
     .scroll{padding:0}
-    .block.open .body{position:fixed;top:114px;left:10px;width:calc(100vw - 20px);overflow:visible}
+    .block.open .body{width:calc(100vw - 20px);overflow:visible}
     #map{flex:1;min-height:280px}
     .kpis{display:none}
   }
@@ -314,8 +314,8 @@
         <div class="body">
           <div class="field" id="mainFolderRow" style="margin-bottom:11px">
             <label id="mainFolderLabel">Rede principal por UF — arquivos na nuvem (Ctrl/Cmd+clique para selecionar vários)</label>
-            <select id="mainFolderSelect"><option value="" disabled selected>Carregando lista…</option></select>
-            <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar rede</button>
+            <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Carregando lista…</option></select>
+            <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
           </div>
           <div class="drop" id="dropMain" role="button" tabindex="0" aria-label="Anexar arquivos KMZ ou KML da rede principal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
@@ -489,10 +489,7 @@ const notifLayerGroup = L.featureGroup().addTo(map);
 
 /* ============ Utilidades ============ */
 const $=id=>document.getElementById(id);
-$("mainFolderLabel").textContent="Selecione a rede principal disponível na nuvem";
-$("mainFolderSelect").onchange=()=>{
-  if($("mainFolderSelect").value) $("btnLoadSelectedMains").click();
-};
+$("mainFolderLabel").textContent="Selecione um ou mais arquivos KMZ/KML da rede principal";
 const panelBlocks=Array.from(document.querySelectorAll(".scroll > .block"));
 function closePanels(except){
   panelBlocks.forEach(block=>{
@@ -506,6 +503,15 @@ function closePanels(except){
 function collapsePanelsAfterAction(){
   closePanels();
   syncMapLayout();
+}
+function positionOpenPanel(block){
+  const trigger=block.querySelector("h2");
+  const body=block.querySelector(".body");
+  if(!trigger||!body) return;
+  const rect=trigger.getBoundingClientRect();
+  const panelWidth=Math.min(400,window.innerWidth-20);
+  body.style.left=Math.max(10,Math.min(rect.left,window.innerWidth-panelWidth-10))+"px";
+  body.style.top=(rect.bottom+6)+"px";
 }
 panelBlocks.forEach((block,index)=>{
   const trigger=block.querySelector("h2");
@@ -522,6 +528,7 @@ panelBlocks.forEach((block,index)=>{
     closePanels(block);
     block.classList.toggle("open",willOpen);
     trigger.setAttribute("aria-expanded",String(willOpen));
+    if(willOpen) positionOpenPanel(block);
     syncMapLayout();
   };
   trigger.onclick=toggle;
@@ -1071,6 +1078,7 @@ function syncMapLayout(){
   cancelAnimationFrame(mapLayoutFrame);
   mapLayoutFrame=requestAnimationFrame(()=>{
     const stage=document.querySelector(".stage");
+    document.querySelectorAll(".scroll > .block.open").forEach(positionOpenPanel);
     if(window.matchMedia("(min-width:821px)").matches){
       const height=Math.max(0,window.innerHeight-stage.getBoundingClientRect().top);
       stage.style.height=height+"px";
