@@ -97,7 +97,7 @@
 const SUPABASE_URL="https://hhwghwqynrxrksrzjvgc.supabase.co";
 const SUPABASE_ANON_KEY="sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
 const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
-let preventivas=[];
+let preventivas=[],loading=false,queuedLoad=false;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function haversine(aLat,aLng,bLat,bLng){const R=6371000,toR=Math.PI/180,dLat=(bLat-aLat)*toR,dLng=(bLng-aLng)*toR;const x=Math.sin(dLat/2)**2+Math.cos(aLat*toR)*Math.cos(bLat*toR)*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
@@ -135,15 +135,35 @@ function render(){
       <div class="distance"><strong>${distance.meters?fmtDist(distance.meters):"—"}</strong><small>${distance.estimated?"estimada entre pontos":distance.meters?"trajeto do KMZ":"sem trajeto calculável"}</small></div>
     </article>`;}).join("");
 }
-async function load(){
-  $("reload").disabled=true;$("sync").textContent="Atualizando dados…";
+async function load(silent){
+  silent=!!silent;
+  if(loading){queuedLoad=true;return;}
+  loading=true;$("reload").disabled=true;
+  if(!silent) $("sync").textContent="Atualizando dados…";
   try{
     const {data,error}=await db.from("preventivas").select("id,name,date,ga,color,visible,geojson,created_at").order("created_at",{ascending:true});
     if(error)throw error;preventivas=data||[];render();$("sync").textContent="Atualizado em "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
   }catch(error){console.warn("Erro ao carregar preventivas",error);$("sync").textContent="Falha ao carregar";$("list").innerHTML='<div class="empty error">Não foi possível carregar as preventivas: '+esc(error.message)+'</div>';}
-  finally{$("reload").disabled=false;}
+  finally{
+    loading=false;$("reload").disabled=false;
+    if(queuedLoad){queuedLoad=false;setTimeout(()=>load(true),0);}
+  }
 }
-$("search").addEventListener("input",render);$("reload").onclick=load;load();
+let summaryReloadTimer=0;
+function scheduleSummaryReload(delay){
+  clearTimeout(summaryReloadTimer);
+  summaryReloadTimer=setTimeout(()=>{if(document.visibilityState==="visible"&&navigator.onLine)load(true);},delay==null?700:delay);
+}
+const publicSyncChannel=db.channel("jarvis-public-sync")
+  .on("postgres_changes",{event:"*",schema:"public",table:"preventivas"},()=>scheduleSummaryReload(500))
+  .on("broadcast",{event:"data-changed"},()=>scheduleSummaryReload(300));
+publicSyncChannel.subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")console.warn("Realtime indisponível; sincronização periódica ativa.");});
+setInterval(()=>scheduleSummaryReload(0),30000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")scheduleSummaryReload(150);});
+window.addEventListener("focus",()=>scheduleSummaryReload(150));
+window.addEventListener("online",()=>scheduleSummaryReload(150));
+window.addEventListener("pageshow",event=>{if(event.persisted)scheduleSummaryReload(150);});
+$("search").addEventListener("input",render);$("reload").onclick=()=>load(false);load(false);
 </script>
 </body>
 </html>

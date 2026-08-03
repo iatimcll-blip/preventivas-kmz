@@ -325,7 +325,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
     ↻ Recarregar
   </button>
-  <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Sessão salva localmente</div>
+  <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Conectando ao Supabase</div>
   <aside>
     <div class="scroll">
 
@@ -443,6 +443,7 @@
 const SUPABASE_URL = "https://hhwghwqynrxrksrzjvgc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let publicSyncChannel=null;
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
@@ -1409,7 +1410,7 @@ $("clearAll").onclick=async()=>{
   renderMain(); refresh();
   toast("Rede principal e notificações limpas. Preventivas mantidas.","ok");
 };
-$("btnReload").onclick=()=>loadAll();
+$("btnReload").onclick=()=>loadAll(false);
 $("btnSavePrev").onclick=async()=>{
   if(!state.preventivas.length){ toast("Nenhuma preventiva pra salvar.","err"); return; }
   const rows=state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}));
@@ -1423,6 +1424,7 @@ async function sbCall(fn, errMsg){
     const {error}=await fn();
     if(error) throw error;
     setSaveBadge(true);
+    if(publicSyncChannel) publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
     return true;
   }catch(e){
     console.warn(errMsg,e);
@@ -1479,7 +1481,8 @@ async function withRetry(queryFn, tries, delayMs){
   }
   return res;
 }
-async function loadAll(){
+async function loadAll(silent){
+  silent=!!silent;
   $("btnReload") && ($("btnReload").disabled=true);
   const [mainsRes,prevRes,filesRes,notifRes,settingsRes]=await Promise.all([
     withRetry(()=>sb.from('mains').select('*').order('created_at')),
@@ -1518,12 +1521,39 @@ async function loadAll(){
   renderMain(); state.preventivas.forEach(renderPrev); renderAllNotifMarkers();
   if(state.showNotifications) notifLayerGroup.addTo(map); else map.removeLayer(notifLayerGroup);
   refresh();
-  setTimeout(fitAll,200);
-  if(failed.length) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no topo) para tentar de novo.","err");
-  else if(stale.length) toast("Servidor indisponível agora — mostrando última versão salva neste navegador: "+stale.join(", ")+".","err");
-  else if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Dados carregados do Supabase.","ok");
+  if(!silent) setTimeout(fitAll,200);
+  if(failed.length){
+    setSaveBadge(false);
+    if(!silent) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no topo) para tentar de novo.","err");
+  }else if(stale.length){
+    setSaveBadge(false);
+    if(!silent) toast("Servidor indisponível agora — mostrando última versão salva neste navegador: "+stale.join(", ")+".","err");
+  }else{
+    setSaveBadge(true);
+    if(!silent&&(state.mains.length||state.preventivas.length||state.notifications.length)) toast("Dados compartilhados carregados do Supabase.","ok");
+  }
   $("btnReload") && ($("btnReload").disabled=false);
 }
+
+/* Sincroniza mudanças feitas em qualquer dispositivo. O canal em tempo real
+   atualiza quase imediatamente; a verificação periódica cobre projetos onde
+   o Realtime ainda não esteja habilitado para alguma tabela. */
+let sharedReloadTimer=0;
+function scheduleSharedReload(delay){
+  clearTimeout(sharedReloadTimer);
+  sharedReloadTimer=setTimeout(()=>{
+    if(document.visibilityState==="visible"&&navigator.onLine) loadAll(true);
+  },delay==null?700:delay);
+}
+publicSyncChannel=sb.channel("jarvis-public-sync")
+  .on("postgres_changes",{event:"*",schema:"public"},()=>scheduleSharedReload(500))
+  .on("broadcast",{event:"data-changed"},()=>scheduleSharedReload(300));
+publicSyncChannel.subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")console.warn("Realtime indisponível; sincronização periódica ativa.");});
+setInterval(()=>scheduleSharedReload(0),30000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")scheduleSharedReload(150);});
+window.addEventListener("focus",()=>scheduleSharedReload(150));
+window.addEventListener("online",()=>scheduleSharedReload(150));
+window.addEventListener("pageshow",event=>{if(event.persisted)scheduleSharedReload(150);});
 
 /* ============ Exportação ============ */
 function hexToKml(hex){ // #RRGGBB -> aabbggrr
