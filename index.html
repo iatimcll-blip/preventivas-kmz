@@ -247,6 +247,18 @@
   #lightbox{position:fixed;inset:0;z-index:4000;background:#000000e6;display:none;place-items:center;padding:26px;cursor:zoom-out}
   #lightbox.show{display:grid}
   #lightbox img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 24px 70px -12px #000}
+  .access-modal{position:fixed;inset:0;z-index:5000;display:none;place-items:center;padding:16px;background:#02070bd9;backdrop-filter:blur(7px)}
+  .access-modal.show{display:grid}.access-dialog{width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 24px 70px #000}
+  .access-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}.access-head h3{margin:0;font-size:18px}.access-head p{margin:4px 0 0;color:var(--ink-3);font-size:11px;line-height:1.45}.access-head .icon-btn{margin-left:auto;flex:0 0 auto}
+  .access-form{display:grid;gap:10px}.access-form .btn-row{flex-wrap:wrap}.access-form .btn{flex:1 1 130px}.access-message{min-height:18px;margin-top:8px;color:var(--ink-3);font-size:11px;line-height:1.45}
+  .access-user{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}.access-user b{display:block;font-size:13px;overflow-wrap:anywhere}.access-user small{color:var(--ink-3)}
+  .access-list{display:grid;gap:8px;margin-top:12px}.access-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:center;padding:9px;border:1px solid var(--line);border-radius:9px;background:#0a141c}.access-row .email{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px}.access-row select{min-width:0}.access-row label{font-size:10px;color:var(--ink-2)}
+  body[data-access="public"] #btnSavePrev,body[data-access="public"] #clearAll,body[data-access="public"] #dropPrev,body[data-access="public"] #dropNotif,body[data-access="public"] #mainFolderRow,
+  body[data-access="viewer"] #btnSavePrev,body[data-access="viewer"] #clearAll,body[data-access="viewer"] #dropPrev,body[data-access="viewer"] #dropNotif,body[data-access="viewer"] #mainFolderRow{display:none!important}
+  body[data-access="public"] .prev input,body[data-access="viewer"] .prev input{pointer-events:none;opacity:.72}
+  body[data-access="public"] [data-act="vis"],body[data-access="public"] [data-act="del"],body[data-access="public"] [data-act="mvis"],body[data-access="public"] [data-act="mdel"],body[data-access="public"] [data-act="ndel"],body[data-access="public"] .notif-btn,
+  body[data-access="viewer"] [data-act="vis"],body[data-access="viewer"] [data-act="del"],body[data-access="viewer"] [data-act="mvis"],body[data-access="viewer"] [data-act="mdel"],body[data-access="viewer"] [data-act="ndel"],body[data-access="viewer"] .notif-btn{display:none!important}
+  body[data-access="editor"] #clearAll,body[data-access="editor"] #mainFolderRow,body[data-access="editor"] [data-act="del"],body[data-access="editor"] [data-act="mdel"],body[data-access="editor"] [data-act="ndel"]{display:none!important}
 
   /* toast */
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:3000;
@@ -282,12 +294,13 @@
     .brand small{display:none}
     .leaflet-tooltip.prev-tip{display:none}
     .leaflet-popup-content{max-width:calc(100vw - 80px)}
+    .access-dialog{padding:15px}.access-row{grid-template-columns:1fr 98px}.access-row label{grid-column:1/-1}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   :focus-visible{outline:2px solid var(--optic);outline-offset:2px}
 </style>
 </head>
-<body>
+<body data-access="public">
 
 <header>
   <div class="brand">
@@ -326,6 +339,10 @@
   <button class="btn" id="btnReload">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
     ↻ Recarregar
+  </button>
+  <button class="btn" id="btnAccess" type="button" aria-label="Entrar ou gerenciar acessos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+    <span id="accessLabel">Entrar</span>
   </button>
   <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Conectando ao Supabase</div>
   <aside>
@@ -434,6 +451,24 @@
   </div>
 </div>
 
+<div class="access-modal" id="accessModal" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
+  <div class="access-dialog">
+    <div class="access-head"><div><h3 id="accessTitle">Acessos do sistema</h3><p>Consulta pública. Alterações exigem perfil Editor ou Administrador.</p></div><button class="icon-btn" id="closeAccess" type="button" aria-label="Fechar acessos">×</button></div>
+    <div id="signedOutAccess" class="access-form">
+      <div class="field"><label>E-mail</label><input id="accessEmail" type="email" autocomplete="username" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha</label><input id="accessPassword" type="password" autocomplete="current-password" minlength="6" placeholder="Mínimo de 6 caracteres"></div>
+      <div class="btn-row"><button class="btn primary" id="loginAccess" type="button">Entrar</button><button class="btn" id="signupAccess" type="button">Criar conta</button></div>
+      <button class="btn" id="resetAccess" type="button">Recuperar senha</button>
+    </div>
+    <div id="signedInAccess" hidden>
+      <div class="access-user"><b id="accessUserEmail"></b><small id="accessRoleText"></small></div>
+      <div class="btn-row" style="margin-top:10px"><button class="btn" id="logoutAccess" type="button">Sair</button><button class="btn" id="refreshAccess" type="button" hidden>Atualizar usuários</button></div>
+      <div id="adminAccessPanel" hidden><div class="access-list" id="accessList"></div></div>
+    </div>
+    <div class="access-message" id="accessMessage" aria-live="polite"></div>
+  </div>
+</div>
+
 <input type="file" id="fileMain" accept=".kmz,.kml" multiple hidden>
 <input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
 <input type="file" id="fileNotif" accept=".xlsx" multiple hidden><div id="lightbox"><img alt="Foto da preventiva"></div>
@@ -450,6 +485,7 @@ let publicSyncChannel=null;
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
+let currentUser=null,currentRole="public";
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
 const PHOTOS = {};
@@ -596,6 +632,83 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape") collapsePanelsAfte
 function toast(msg,type){const t=$("toast");t.textContent=msg;t.className="show "+(type||"");clearTimeout(t._t);t._t=setTimeout(()=>t.className="",3200);}
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+const roleNames={public:"Público",viewer:"Visualizador",editor:"Editor",admin:"Administrador"};
+const canEdit=()=>currentRole==="editor"||currentRole==="admin";
+const canAdmin=()=>currentRole==="admin";
+function requireEditor(){if(canEdit())return true;toast("Entre com um acesso de Editor ou Administrador para alterar dados.","err");openAccessModal();return false;}
+function requireAdmin(){if(canAdmin())return true;toast("Esta ação exige acesso de Administrador.","err");openAccessModal();return false;}
+function setAccessMessage(message,isError){const el=$("accessMessage");el.textContent=message||"";el.style.color=isError?"#ffc1bf":"";}
+function openAccessModal(){
+  $("accessModal").classList.add("show");setAccessMessage("");
+  if(currentUser&&canAdmin()) loadAccessUsers();
+  else if(!currentUser) setTimeout(()=>$("accessEmail").focus(),60);
+}
+function closeAccessModal(){$("accessModal").classList.remove("show");}
+function applyPermissions(){
+  document.body.dataset.access=currentRole;
+  $("accessLabel").textContent=currentUser?roleNames[currentRole]:"Entrar";
+  $("signedOutAccess").hidden=!!currentUser;$("signedInAccess").hidden=!currentUser;
+  $("adminAccessPanel").hidden=!canAdmin();$("refreshAccess").hidden=!canAdmin();
+  if(currentUser){$("accessUserEmail").textContent=currentUser.email||"Usuário";$("accessRoleText").textContent="Perfil: "+roleNames[currentRole];}
+  document.querySelectorAll("#prevList input").forEach(input=>input.disabled=!canEdit());
+}
+async function refreshAccessSession(){
+  const {data:{session}}=await sb.auth.getSession();
+  currentUser=session&&session.user||null;currentRole=currentUser?"viewer":"public";
+  if(currentUser){
+    const {data,error}=await sb.from("user_access").select("role,active").eq("user_id",currentUser.id).maybeSingle();
+    if(!error&&data&&data.active) currentRole=data.role;
+    else if(data&&!data.active){await sb.auth.signOut();currentUser=null;currentRole="public";setAccessMessage("Este acesso está desativado.",true);}
+  }
+  applyPermissions();
+}
+async function loadAccessUsers(){
+  if(!canAdmin())return;
+  $("accessList").innerHTML='<div class="empty">Carregando usuários…</div>';
+  const {data,error}=await sb.from("user_access").select("user_id,email,role,active,created_at").order("created_at");
+  if(error){setAccessMessage("Não foi possível carregar os usuários: "+error.message,true);return;}
+  $("accessList").innerHTML=(data||[]).map(user=>`<div class="access-row" data-user="${esc(user.user_id)}"><div class="email" title="${esc(user.email)}">${esc(user.email)}</div><select aria-label="Perfil de ${esc(user.email)}"><option value="viewer"${user.role==="viewer"?" selected":""}>Visualizador</option><option value="editor"${user.role==="editor"?" selected":""}>Editor</option><option value="admin"${user.role==="admin"?" selected":""}>Administrador</option></select><label><input type="checkbox"${user.active?" checked":""}> Ativo</label></div>`).join("")||'<div class="empty">Nenhum usuário cadastrado.</div>';
+  $("accessList").querySelectorAll(".access-row").forEach(row=>{
+    const select=row.querySelector("select"),active=row.querySelector('input[type="checkbox"]');
+    const save=async()=>{
+      select.disabled=true;active.disabled=true;
+      const {error:updateError}=await sb.from("user_access").update({role:select.value,active:active.checked}).eq("user_id",row.dataset.user);
+      select.disabled=false;active.disabled=false;
+      if(updateError){setAccessMessage(updateError.message,true);await loadAccessUsers();return;}
+      setAccessMessage("Permissão atualizada.");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
+      if(row.dataset.user===currentUser.id) await refreshAccessSession();
+    };
+    select.onchange=save;active.onchange=save;
+  });
+}
+async function initAccess(){
+  $("btnAccess").onclick=openAccessModal;$("closeAccess").onclick=closeAccessModal;
+  $("accessModal").onclick=e=>{if(e.target===$("accessModal"))closeAccessModal();};
+  $("loginAccess").onclick=async()=>{
+    const email=$("accessEmail").value.trim(),password=$("accessPassword").value;
+    if(!email||!password){setAccessMessage("Informe e-mail e senha.",true);return;}
+    setAccessMessage("Entrando…");const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error){setAccessMessage("Não foi possível entrar: "+error.message,true);return;}
+    await refreshAccessSession();setAccessMessage("Acesso realizado com sucesso.");
+  };
+  $("signupAccess").onclick=async()=>{
+    const email=$("accessEmail").value.trim(),password=$("accessPassword").value;
+    if(!email||password.length<6){setAccessMessage("Informe um e-mail e uma senha com pelo menos 6 caracteres.",true);return;}
+    setAccessMessage("Criando conta…");const {data,error}=await sb.auth.signUp({email,password,options:{emailRedirectTo:location.origin+location.pathname}});
+    if(error){setAccessMessage("Não foi possível criar a conta: "+error.message,true);return;}
+    if(data.session){await refreshAccessSession();setAccessMessage("Conta criada. O perfil inicial é Visualizador.");}
+    else setAccessMessage("Conta criada. Confirme o e-mail recebido para entrar.");
+  };
+  $("resetAccess").onclick=async()=>{
+    const email=$("accessEmail").value.trim();if(!email){setAccessMessage("Informe o e-mail para recuperar a senha.",true);return;}
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    setAccessMessage(error?"Não foi possível enviar: "+error.message:"E-mail de recuperação enviado.",!!error);
+  };
+  $("logoutAccess").onclick=async()=>{await sb.auth.signOut();await refreshAccessSession();closeAccessModal();toast("Acesso encerrado.","ok");};
+  $("refreshAccess").onclick=loadAccessUsers;
+  sb.auth.onAuthStateChange(()=>setTimeout(refreshAccessSession,0));
+  await refreshAccessSession();
+}
 function labelIconButtons(root){
   root.querySelectorAll("button.icon-btn[title]").forEach(button=>button.setAttribute("aria-label",button.title));
 }
@@ -842,6 +955,7 @@ function wireNotifPopupBtn(m,n){
   const el=m.getPopup()&&m.getPopup().getElement(); if(!el) return;
   const btn=el.querySelector("[data-notif]");
   if(btn) btn.onclick=()=>{
+    if(!requireEditor()) return;
     n.status = n.status==="concluido" ? "pendente" : "concluido";
     const done=n.status==="concluido";
     m.setStyle({fillColor:done?"#34d399":"#f87171",radius:done?5:6.5});
@@ -975,6 +1089,7 @@ function renderMainList(){
   tag.textContent=state.mains.length+" arquivo"+(state.mains.length>1?"s":"")+" · "+totalFeat+" feições";
   loaded.querySelectorAll("[data-act='mzoom']").forEach(b=>b.onclick=()=>{ const lg=mainLayerGroups[b.dataset.id]; if(lg)map.fitBounds(lg.getBounds(),{padding:[40,40]}); });
   loaded.querySelectorAll("[data-act='mvis']").forEach(b=>b.onclick=()=>{
+    if(!requireEditor()) return;
     const mo=state.mains.find(x=>x.id===b.dataset.id); if(!mo) return;
     mo.visible=!(mo.visible!==false);
     const lg=mainLayerGroups[mo.id];
@@ -983,6 +1098,7 @@ function renderMainList(){
     sbCall(()=>sb.from('mains').update({visible:mo.visible}).eq('id',mo.id), "Erro ao salvar visibilidade");
   });
   loaded.querySelectorAll("[data-act='mdel']").forEach(b=>b.onclick=()=>{
+    if(!requireAdmin()) return;
     if(!confirm("Remover este arquivo da rede principal?")) return;
     state.mains=state.mains.filter(x=>x.id!==b.dataset.id);
     renderMain(); refresh();
@@ -1031,14 +1147,14 @@ function renderPrevList(){
     list.appendChild(el);
   });
 
-  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);refreshLegend();sbCall(()=>sb.from('preventivas').update({name:p.name}).eq('id',p.id),"Erro ao salvar nome");}});
-  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){const f=e.target.dataset.field;p[f]=e.target.value;if(f==="date")renderPrev(p);sbCall(()=>sb.from('preventivas').update({[f]:p[f]}).eq('id',p.id),"Erro ao salvar "+f);}});
+  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{if(!requireEditor())return;const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);refreshLegend();sbCall(()=>sb.from('preventivas').update({name:p.name}).eq('id',p.id),"Erro ao salvar nome");}});
+  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{if(!requireEditor())return;const p=find(e.target.dataset.id);if(p){const f=e.target.dataset.field;p[f]=e.target.value;if(f==="date")renderPrev(p);sbCall(()=>sb.from('preventivas').update({[f]:p[f]}).eq('id',p.id),"Erro ao salvar "+f);}});
   list.querySelectorAll("[data-act]").forEach(b=>b.onclick=e=>{
     const p=find(b.dataset.id); if(!p) return;
     const act=b.dataset.act;
-    if(act==="vis"){ p.visible=!(p.visible!==false); renderPrev(p); refresh(); sbCall(()=>sb.from('preventivas').update({visible:p.visible}).eq('id',p.id),"Erro ao salvar visibilidade"); }
+    if(act==="vis"){ if(!requireEditor())return; p.visible=!(p.visible!==false); renderPrev(p); refresh(); sbCall(()=>sb.from('preventivas').update({visible:p.visible}).eq('id',p.id),"Erro ao salvar visibilidade"); }
     else if(act==="zoom"){ const lg=prevLayerGroups[p.id]; if(lg&&lg.getLayers().length){map.fitBounds(lg.getBounds(),{padding:[40,40]});} }
-    else if(act==="del"){ if(!confirm("Remover a preventiva \""+p.name+"\"?")) return;
+    else if(act==="del"){ if(!requireAdmin()||!confirm("Remover a preventiva \""+p.name+"\"?")) return;
       if(prevLayerGroups[p.id]){map.removeLayer(prevLayerGroups[p.id]);delete prevLayerGroups[p.id];}
       state.preventivas=state.preventivas.filter(x=>x.id!==p.id); refresh();
       sbCall(()=>sb.from('preventivas').delete().eq('id',p.id),"Erro ao remover preventiva"); }
@@ -1061,6 +1177,7 @@ function renderNotifFileList(){
   const totalCount=state.notifications.length;
   tag.textContent=state.notifFiles.length+" arquivo"+(state.notifFiles.length>1?"s":"")+" · "+totalCount+" notific"+(totalCount===1?"ação":"ações");
   loaded.querySelectorAll("[data-act='ndel']").forEach(b=>b.onclick=()=>{
+    if(!requireAdmin()) return;
     if(!confirm("Remover esta planilha e suas notificações do mapa?")) return;
     state.notifications=state.notifications.filter(n=>n.fileId!==b.dataset.id);
     state.notifFiles=state.notifFiles.filter(x=>x.id!==b.dataset.id);
@@ -1133,6 +1250,7 @@ function refresh(){
   refreshLegend();
   updateKpis(cov);
   labelIconButtons(document);
+  applyPermissions();
 }
 
 /* O painel lateral pode mudar de altura ao recalcular a cobertura. Em alguns
@@ -1169,6 +1287,7 @@ function fitAll(){
 
 /* ============ Uploads ============ */
 async function addMain(files){
+  if(!requireAdmin()) return;
   let ok=0,fail=0;
   for(const file of files){
     try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file,{images:false});
@@ -1184,6 +1303,7 @@ async function addMain(files){
   else toast("Falha ao ler o(s) arquivo(s).","err");
 }
 async function addPrev(files){
+  if(!requireEditor()) return;
   let ok=0,fail=0;
   for(const file of files){
     try{ const {geojson:gj,images}=await readGeo(file);
@@ -1227,6 +1347,7 @@ async function fetchMapPoints(link){
 function notifKey(os,name){ return os+"|"+name; }
 
 async function addNotif(files){
+  if(!requireEditor()) return;
   if(typeof XLSX==="undefined"){ toast("Biblioteca de leitura de planilhas indisponível.","err"); return; }
   const seen=new Set(state.notifications.map(n=>notifKey(n.os,n.name)));
   let filesOk=0, filesFail=0;
@@ -1369,6 +1490,7 @@ $("btnClearMainSelection").onclick=()=>{
   }
 };
 $("btnLoadSelectedMains").onclick=async()=>{
+  if(!requireAdmin()) return;
   const sel=$("mainFolderSelect");
   const picked=Array.from(sel.selectedOptions).map(o=>mainFolderFiles[o.value]).filter(Boolean);
   if(!picked.length){ toast("Selecione ao menos um arquivo na lista (Ctrl/Cmd+clique para vários).","err"); return; }
@@ -1392,6 +1514,7 @@ $("btnLoadSelectedMains").onclick=async()=>{
   }
 };
 async function replaceMains(files){
+  if(!requireAdmin()) return;
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
   const oldIds=state.mains.map(m=>m.id);
@@ -1404,6 +1527,7 @@ async function replaceMains(files){
 /* radius + highlight */
 $("radius").oninput=e=>{ state.radius=+e.target.value; $("radiusVal").textContent=state.radius+" m"; };
 function saveSettings(){
+  if(!canEdit()) return Promise.resolve(true);
   return sbCall(()=>sb.from('settings').upsert({id:1,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
     showCTO:state.showCTO,showCEO:state.showCEO,showNotifications:state.showNotifications}), "Erro ao salvar configurações");
 }
@@ -1420,6 +1544,7 @@ $("showNotif").onchange=e=>{
 
 /* limpar */
 $("clearAll").onclick=async()=>{
+  if(!requireAdmin()) return;
   if(!confirm("Limpar a rede principal e as notificações de TODOS OS DISPOSITIVOS? As preventivas anexadas serão mantidas.")) return;
   if(prompt("Para confirmar a limpeza global, digite LIMPAR.")!=="LIMPAR"){
     toast("Limpeza global cancelada.","err");
@@ -1443,6 +1568,7 @@ $("clearAll").onclick=async()=>{
 };
 $("btnReload").onclick=()=>loadAll(false);
 $("btnSavePrev").onclick=async()=>{
+  if(!requireEditor()) return;
   if(!state.preventivas.length){ toast("Nenhuma preventiva pra salvar.","err"); return; }
   const rows=state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}));
   const ok=await sbCall(()=>sb.from('preventivas').upsert(rows), "Erro ao salvar preventivas");
@@ -1651,9 +1777,11 @@ $("expCsv").onclick=()=>{
 
 /* ============ Start ============ */
 $("lightbox").onclick=()=>$("lightbox").classList.remove("show");
-document.addEventListener("keydown",e=>{ if(e.key==="Escape")$("lightbox").classList.remove("show"); });
-loadAll();
-loadMainFolderFromCloud();
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){$("lightbox").classList.remove("show");closeAccessModal();}});
+initAccess().catch(error=>{console.warn("initAccess",error);currentUser=null;currentRole="public";applyPermissions();}).finally(()=>{
+  loadAll();
+  loadMainFolderFromCloud();
+});
 setTimeout(()=>map.invalidateSize(),300);
 window.addEventListener("resize",syncMapLayout);
 /* Alguns Windows/Chrome deixam uma faixa da página sem repintar depois de
