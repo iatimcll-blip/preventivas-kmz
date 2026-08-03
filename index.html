@@ -1124,11 +1124,12 @@ async function addPrev(files){
     try{ const {geojson:gj,images}=await readGeo(file);
       const p={id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),date:todayISO(),ga:"",color:COLORS[colorIx++%COLORS.length],visible:true,geojson:gj};
       processPhotos(p,images);
+      const saved=await sbCall(()=>sb.from('preventivas').insert(p), "Erro ao salvar preventiva");
+      if(!saved){ fail++; continue; }
       state.preventivas.push(p); renderPrev(p); ok++;
-      sbCall(()=>sb.from('preventivas').insert(p), "Erro ao salvar preventiva");
-    }catch(e){ fail++; console.warn(file.name,e); }
+    }catch(e){ fail++; console.warn(file.name,e); toast("Erro ao ler "+file.name+": "+e.message,"err"); }
   }
-  refresh();
+  refresh(); fitAll();
   if(ok&&!fail) toast(ok+" preventiva(s) adicionada(s).","ok");
   else if(ok&&fail) toast(ok+" adicionada(s), "+fail+" com erro.","err");
   else toast("Falha ao ler o(s) arquivo(s).","err");
@@ -1351,7 +1352,7 @@ $("showNotif").onchange=e=>{
 
 /* limpar */
 $("clearAll").onclick=async()=>{
-  if(!confirm("Limpar rede principal, preventivas e notificações de TODOS OS DISPOSITIVOS? Esta ação não pode ser desfeita.")) return;
+  if(!confirm("Limpar a rede principal e as notificações de TODOS OS DISPOSITIVOS? As preventivas anexadas serão mantidas.")) return;
   if(prompt("Para confirmar a limpeza global, digite LIMPAR.")!=="LIMPAR"){
     toast("Limpeza global cancelada.","err");
     return;
@@ -1359,7 +1360,6 @@ $("clearAll").onclick=async()=>{
   const cleared=await Promise.all([
     sbCall(()=>sb.from('notifications').delete().not('id','is',null), "Erro ao limpar notificações"),
     sbCall(()=>sb.from('notif_files').delete().not('id','is',null), "Erro ao limpar arquivos de notificações"),
-    sbCall(()=>sb.from('preventivas').delete().not('id','is',null), "Erro ao limpar preventivas"),
     sbCall(()=>sb.from('mains').delete().not('id','is',null), "Erro ao limpar rede principal"),
   ]);
   if(!cleared.every(Boolean)){
@@ -1368,12 +1368,10 @@ $("clearAll").onclick=async()=>{
   }
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
-  Object.values(prevLayerGroups).forEach(g=>map.removeLayer(g));
-  Object.keys(prevLayerGroups).forEach(k=>delete prevLayerGroups[k]);
   notifLayerGroup.clearLayers(); notifMarkers={};
-  state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:state.radius,highlight:state.highlight,showLabels:state.showLabels};
+  state={...state,mains:[],notifFiles:[],notifications:[]};
   renderMain(); refresh();
-  toast("Tudo limpo.","ok");
+  toast("Rede principal e notificações limpas. Preventivas mantidas.","ok");
 };
 $("btnReload").onclick=()=>loadAll();
 $("btnSavePrev").onclick=async()=>{
