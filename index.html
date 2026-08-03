@@ -507,7 +507,7 @@
 </div>
 
 <input type="file" id="fileMain" accept=".kmz,.kml" multiple hidden>
-<input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
+<input type="file" id="filePrev" accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml,application/zip" multiple hidden>
 <input type="file" id="fileNotif" accept=".xlsx" multiple hidden><div id="lightbox"><img alt="Foto da preventiva"></div>
 <div id="toast"></div>
 
@@ -522,7 +522,7 @@ let publicSyncChannel=null;
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
-let currentUser=null,currentRole="public",protectedDataLoaded=false,pendingAccessCount=0,pendingNoticeShown=false;
+let currentUser=null,currentRole="public",protectedDataLoaded=false,pendingAccessCount=0,pendingNoticeShown=false,accessRefreshPromise=null;
 let pointAccessUser=null,pointAccessCatalog={preventivas:[],notifications:[]},selectedPreventivaIds=new Set(),selectedNotificationIds=new Set();
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
@@ -713,16 +713,43 @@ async function refreshPendingAccess(announce){
   }
 }
 async function refreshAccessSession(){
-  const {data:{session}}=await sb.auth.getSession();
-  currentUser=session&&session.user||null;currentRole="public";
-  if(currentUser){
-    const {data,error}=await sb.from("user_access").select("role,active").eq("user_id",currentUser.id).maybeSingle();
-    if(!error&&data&&data.active) currentRole=data.role;
-    else if(data&&!data.active){await sb.auth.signOut({scope:"local"});currentUser=null;setAccessMessage("Sua solicitação está aguardando aprovação do Administrador.",true);}
-  }
-  applyPermissions();
-  if(canAdmin())await refreshPendingAccess(false);
-  return hasContentAccess();
+  if(accessRefreshPromise)return accessRefreshPromise;
+  accessRefreshPromise=(async()=>{
+    const previousUser=currentUser,previousRole=currentRole;
+    const {data:sessionData,error:sessionError}=await sb.auth.getSession();
+    if(sessionError){
+      console.warn("Não foi possível atualizar a sessão",sessionError);
+      if(previousUser&&previousRole!=="public")return true;
+      currentUser=null;currentRole="public";applyPermissions();return false;
+    }
+    const session=sessionData&&sessionData.session;
+    if(!session){currentUser=null;currentRole="public";applyPermissions();return false;}
+    const sessionUser=session.user;
+    const profileResult=await withRetry(()=>sb.from("user_access").select("role,active").eq("user_id",sessionUser.id).maybeSingle(),3,500);
+    if(profileResult.error){
+      console.warn("Não foi possível atualizar o perfil de acesso",profileResult.error);
+      if(previousUser&&previousUser.id===sessionUser.id&&previousRole!=="public"){
+        currentUser=sessionUser;currentRole=previousRole;applyPermissions();return true;
+      }
+      currentUser=sessionUser;currentRole="public";applyPermissions();setAccessMessage("Não foi possível validar o perfil agora. Verifique a conexão e tente novamente.",true);return false;
+    }
+    currentUser=sessionUser;
+    if(profileResult.data&&profileResult.data.active)currentRole=profileResult.data.role;
+    else if(profileResult.data&&!profileResult.data.active){
+      await sb.auth.signOut({scope:"local"});currentUser=null;currentRole="public";setAccessMessage("Sua solicitação está aguardando aprovação do Administrador.",true);
+    }else currentRole="public";
+    applyPermissions();
+    if(canAdmin())await refreshPendingAccess(false);
+    return hasContentAccess();
+  })();
+  try{return await accessRefreshPromise;}finally{accessRefreshPromise=null;}
+}
+async function ensureEditorAccess(){
+  const allowed=await refreshAccessSession();
+  if(allowed&&canEdit())return true;
+  if(currentUser)toast("Seu perfil não possui permissão para anexar preventivas.","err");
+  else{toast("Entre novamente para anexar a preventiva.","err");openAccessModal();}
+  return false;
 }
 function pointLabel(notification){return [notification.os,notification.name,notification.municipio].filter(Boolean).join(" — ")||notification.id;}
 function filteredPointCatalog(){
@@ -1440,7 +1467,7 @@ async function addMain(files){
   else toast("Falha ao ler o(s) arquivo(s).","err");
 }
 async function addPrev(files){
-  if(!requireEditor()) return;
+  if(!await ensureEditorAccess()) return;
   let ok=0,fail=0;
   for(const file of files){
     try{ const {geojson:gj,images}=await readGeo(file);
