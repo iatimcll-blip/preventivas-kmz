@@ -1128,7 +1128,7 @@ function notifPopupHtml(n){
   const done=n.status==="concluido";
   const reg=fmtPlacemarkName(n.name);
   let html='<div class="notif-pop'+(done?" done":"")+'"><b>Nort. Equatorial</b>'
-    +'<div class="os">OS: '+esc(n.os)+' • '+esc(n.municipio)+(reg?' • Reg. '+esc(reg):'')+'</div>';
+    +'<div class="os">OS: '+esc(n.os)+' • '+esc(n.municipio)+(reg?' • Reg. '+esc(reg):'')+(n.dataGeracao?' • Gerada em '+esc(n.dataGeracao):'')+'</div>';
   if(n.description==null){
     html+='<div style="color:var(--ink-3);font-size:11.5px">Carregando detalhes…</div>';
   }else{
@@ -1594,6 +1594,19 @@ async function addNotif(files){
       const sheetName=wb.SheetNames.find(n=>n.toLowerCase()==="mapeamento_postes") || wb.SheetNames.find(n=>/mapeamento.*postes/i.test(n));
       if(!sheetName) throw new Error("Aba MAPEAMENTO_POSTES não encontrada.");
       const rows=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,raw:false,defval:""});
+      /* aba BASE_NOTIFICACOES (Coluna D = Data Geração) — opcional, usada só pra
+         enriquecer com a data de geração da OS, casando pela própria OS (Coluna B lá). */
+      const baseSheetName=wb.SheetNames.find(n=>n.toLowerCase()==="base_notificacoes") || wb.SheetNames.find(n=>/base.*notifica/i.test(n));
+      const dataGeracaoByOs={};
+      if(baseSheetName){
+        const baseRows=XLSX.utils.sheet_to_json(wb.Sheets[baseSheetName],{header:1,raw:false,defval:""});
+        for(let i=1;i<baseRows.length;i++){
+          const br=baseRows[i]; if(!br||!br.length) continue;
+          const bos=(br[1]||"").toString().trim();
+          const dataGeracao=(br[3]||"").toString().trim();
+          if(bos&&dataGeracao) dataGeracaoByOs[bos]=dataGeracao;
+        }
+      }
       const fileId=uid();
       let count=0, skipped=0, failed=0, rowsProcessed=0;
       const newNotifications=[];
@@ -1611,7 +1624,7 @@ async function addNotif(files){
             const key=notifKey(os,pt.name);
             if(seen.has(key)){ skipped++; return; } // já existe (mantém status atual, ex.: concluído)
             seen.add(key);
-            const n={id:uid(),fileId,os,municipio,link,name:pt.name,description:pt.description,lat:pt.lat,lng:pt.lng,status:"pendente"};
+            const n={id:uid(),fileId,os,municipio,link,name:pt.name,description:pt.description,lat:pt.lat,lng:pt.lng,status:"pendente",dataGeracao:dataGeracaoByOs[os]||null};
             state.notifications.push(n); newNotifications.push(n);
             count++;
           });
@@ -1886,7 +1899,7 @@ async function loadAll(silent){
     withRetry(()=>sb.from('mains').select('*').order('created_at')),
     withRetry(()=>sb.from('preventivas').select('*').order('created_at')),
     withRetry(()=>sb.from('notif_files').select('*').order('created_at')),
-    withRetry(()=>sb.from('notifications').select('id,fileId,os,municipio,name,lat,lng,status').order('created_at')),
+    withRetry(()=>sb.from('notifications').select('id,fileId,os,municipio,name,lat,lng,status,dataGeracao').order('created_at')),
     withRetry(()=>sb.from('settings').select('*').eq('id',1).maybeSingle())
   ]);
   const failed=[], stale=[];
