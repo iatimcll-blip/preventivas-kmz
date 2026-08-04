@@ -243,6 +243,13 @@
   .cam-chip{display:inline-flex;align-items:center;gap:3px;font:600 10px var(--mono);color:var(--optic);
     background:#0a2a30;border:1px solid #114b54;border-radius:6px;padding:2px 6px;flex:0 0 auto}
   .cam-chip svg{width:11px;height:11px}
+  .notif-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:8px}
+  .notif-photo-wrap{position:relative}
+  .notif-photo-del{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:none;
+    background:#000000b0;color:#fff;font:700 12px var(--sans);cursor:pointer;display:grid;place-items:center;line-height:1;padding:0}
+  .notif-photo-add{display:grid;place-items:center;height:72px;border:1px dashed var(--optic-dim);border-radius:6px;
+    color:var(--optic);font:600 10px var(--sans);cursor:pointer;text-align:center;line-height:1.3}
+  .notif-photo-add input{display:none}
   /* lightbox */
   #lightbox{position:fixed;inset:0;z-index:4000;background:#000000e6;display:none;place-items:center;padding:26px;cursor:zoom-out}
   #lightbox.show{display:grid}
@@ -260,8 +267,8 @@
   body[data-access="public"] #btnSavePrev,body[data-access="public"] #clearAll,body[data-access="public"] #dropPrev,body[data-access="public"] #dropNotif,body[data-access="public"] #mainFolderRow,
   body[data-access="viewer"] #btnSavePrev,body[data-access="viewer"] #clearAll,body[data-access="viewer"] #dropPrev,body[data-access="viewer"] #dropNotif,body[data-access="viewer"] #mainFolderRow{display:none!important}
   body[data-access="public"] .prev input,body[data-access="viewer"] .prev input{pointer-events:none;opacity:.72}
-  body[data-access="public"] [data-act="vis"],body[data-access="public"] [data-act="del"],body[data-access="public"] [data-act="mvis"],body[data-access="public"] [data-act="mdel"],body[data-access="public"] [data-act="ndel"],body[data-access="public"] .notif-btn,
-  body[data-access="viewer"] [data-act="vis"],body[data-access="viewer"] [data-act="del"],body[data-access="viewer"] [data-act="mvis"],body[data-access="viewer"] [data-act="mdel"],body[data-access="viewer"] [data-act="ndel"],body[data-access="viewer"] .notif-btn{display:none!important}
+  body[data-access="public"] [data-act="vis"],body[data-access="public"] [data-act="del"],body[data-access="public"] [data-act="mvis"],body[data-access="public"] [data-act="mdel"],body[data-access="public"] [data-act="ndel"],body[data-access="public"] .notif-btn,body[data-access="public"] .notif-photo-add,body[data-access="public"] .notif-photo-del,
+  body[data-access="viewer"] [data-act="vis"],body[data-access="viewer"] [data-act="del"],body[data-access="viewer"] [data-act="mvis"],body[data-access="viewer"] [data-act="mdel"],body[data-access="viewer"] [data-act="ndel"],body[data-access="viewer"] .notif-btn,body[data-access="viewer"] .notif-photo-add,body[data-access="viewer"] .notif-photo-del{display:none!important}
   body[data-access="editor"] #clearAll,body[data-access="editor"] #mainFolderRow,body[data-access="editor"] [data-act="del"],body[data-access="editor"] [data-act="mdel"],body[data-access="editor"] [data-act="ndel"]{display:none!important}
 
   /* toast */
@@ -1102,6 +1109,21 @@ function parseNotifDesc(desc){
   });
   return {servico,irregularidades,outros};
 }
+function notifPhotosHtml(n){
+  const photos=n.photos||[];
+  let html='<div class="notif-photos">';
+  photos.forEach(path=>{
+    const url=n._photoUrls&&n._photoUrls[path];
+    html+='<div class="notif-photo-wrap">'
+      +(url ? '<img class="pv-th" src="'+url+'" data-full="'+url+'" alt="foto da notificação">'
+             : '<div class="pv-noimg">Carregando…</div>')
+      +'<button class="notif-photo-del" data-photo-del="'+esc(path)+'" title="Remover foto">×</button>'
+      +'</div>';
+  });
+  html+='<label class="notif-photo-add">+ Foto<input type="file" accept="image/*" capture="environment" multiple data-photo-add></label>';
+  html+='</div>';
+  return html;
+}
 function notifPopupHtml(n){
   const done=n.status==="concluido";
   const reg=fmtPlacemarkName(n.name);
@@ -1116,8 +1138,46 @@ function notifPopupHtml(n){
     if(outros.length) html+='<div style="margin-top:4px">'+outros.map(esc).join('<br>')+'</div>';
   }
   if(n.descriptionError) html+='<div style="color:#f87171;font-size:11.5px;margin-top:4px">Não foi possível carregar os detalhes. Feche e toque novamente para tentar.</div>';
+  html+=notifPhotosHtml(n);
   html+='<button class="notif-btn'+(done?" done":"")+'" data-notif="'+n.id+'">'+(done?"↺ Reabrir":"✓ Marcar como concluído")+'</button></div>';
   return html;
+}
+async function ensureNotifPhotoUrls(m,n){
+  const missing=(n.photos||[]).filter(p=>!n._photoUrls||!n._photoUrls[p]);
+  if(!missing.length) return;
+  try{
+    const {data,error}=await sb.storage.from('notif-photos').createSignedUrls(missing,3600);
+    if(error) throw error;
+    n._photoUrls=n._photoUrls||{};
+    (data||[]).forEach((d,i)=>{ if(d&&d.signedUrl) n._photoUrls[missing[i]]=d.signedUrl; });
+  }catch(err){ console.warn("foto da notificação",err); return; }
+  if(m.isPopupOpen()){ m.setPopupContent(notifPopupHtml(n)); wireNotifPopupBtn(m,n); }
+}
+async function uploadNotifPhotos(m,n,fileList){
+  if(!requireEditor()) return;
+  const files=Array.from(fileList||[]);
+  if(!files.length) return;
+  for(const file of files){
+    const path=n.id+"/"+uid()+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    const {error}=await sb.storage.from('notif-photos').upload(path,file,{contentType:file.type||"image/jpeg"});
+    if(error){ toast("Erro ao enviar foto: "+error.message,"err"); continue; }
+    n.photos=[...(n.photos||[]),path];
+  }
+  const ok=await sbCall(()=>sb.from('notifications').update({photos:n.photos}).eq('id',n.id),"Erro ao salvar fotos");
+  if(ok) toast("Foto(s) adicionada(s).","ok");
+  m.setPopupContent(notifPopupHtml(n));
+  wireNotifPopupBtn(m,n);
+}
+async function deleteNotifPhoto(m,n,path){
+  if(!requireEditor()) return;
+  const {error}=await sb.storage.from('notif-photos').remove([path]);
+  if(error){ toast("Erro ao remover foto: "+error.message,"err"); return; }
+  n.photos=(n.photos||[]).filter(p=>p!==path);
+  if(n._photoUrls) delete n._photoUrls[path];
+  const ok=await sbCall(()=>sb.from('notifications').update({photos:n.photos}).eq('id',n.id),"Erro ao salvar fotos");
+  if(ok) toast("Foto removida.","ok");
+  m.setPopupContent(notifPopupHtml(n));
+  wireNotifPopupBtn(m,n);
 }
 function wireNotifPopupBtn(m,n){
   const el=m.getPopup()&&m.getPopup().getElement(); if(!el) return;
@@ -1132,6 +1192,11 @@ function wireNotifPopupBtn(m,n){
     refresh();
     sbCall(()=>sb.from('notifications').update({status:n.status}).eq('id',n.id), "Erro ao salvar status");
   };
+  el.querySelectorAll(".pv-th[data-full]").forEach(img=>{ img.onclick=()=>openLightbox(img.dataset.full); });
+  const addInput=el.querySelector("[data-photo-add]");
+  if(addInput) addInput.onchange=()=>uploadNotifPhotos(m,n,addInput.files);
+  el.querySelectorAll("[data-photo-del]").forEach(delBtn=>{ delBtn.onclick=()=>deleteNotifPhoto(m,n,delBtn.dataset.photoDel); });
+  ensureNotifPhotoUrls(m,n);
 }
 function renderNotifMarker(n){
   if(notifMarkers[n.id]){ notifLayerGroup.removeLayer(notifMarkers[n.id]); delete notifMarkers[n.id]; }
@@ -1145,9 +1210,10 @@ function renderNotifMarker(n){
     wireNotifPopupBtn(m,n);
     if(n.description==null){
       try{
-        const {data,error}=await sb.from('notifications').select('description').eq('id',n.id).single();
+        const {data,error}=await sb.from('notifications').select('description,photos').eq('id',n.id).single();
         if(error) throw error;
         n.description=data&&data.description!=null?data.description:"";
+        n.photos=data&&data.photos?data.photos:[];
         n.descriptionError=false;
       }catch(err){ n.descriptionError=true; console.warn("detalhe da notificação",err); }
       m.setPopupContent(notifPopupHtml(n));

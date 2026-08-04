@@ -32,7 +32,7 @@
     --side:360px;
   }
   *{box-sizing:border-box}
-  html,body{height:100%;height:100vh;margin:0}
+  html,body{height:100%;height:100vh;height:100dvh;margin:0}
   body{
     font-family:var(--sans);color:var(--ink);background:var(--bg);
     display:flex;flex-direction:column;overflow:hidden;
@@ -64,33 +64,41 @@
 
   /* ---------- Barra de ações (topo) ---------- */
   .toolbar{
-    flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:9px 16px;
+    flex:0 0 auto;display:flex;flex-wrap:nowrap;align-items:center;gap:7px;padding:7px 12px;
     background:linear-gradient(180deg,#0f171f,#0b1219);border-bottom:1px solid var(--line);
     overflow-x:auto;white-space:nowrap;
   }
-  .toolbar .btn{width:auto;flex:0 0 auto;padding:8px 13px;font-size:12.5px}
+  .toolbar .btn{width:auto;flex:0 0 auto;padding:7px 10px;font-size:11px}
+  .toolbar a.btn{text-decoration:none}
   .toolbar .btn svg{width:14px;height:14px}
-  .toolbar .save-badge{flex:0 0 auto;padding-top:0}
+  .toolbar .save-badge{flex:0 0 auto;margin-left:0!important;padding-top:0}
 
   /* ---------- Layout ---------- */
-  .stage{flex:1;display:flex;min-height:0}
+  .stage{flex:1;display:flex;flex-direction:column;min-height:0}
   aside{
-    width:var(--side);flex:0 0 var(--side);background:var(--panel);
-    border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;
+    width:auto;flex:0 0 auto;background:transparent;position:relative;z-index:1001;
+    border:none;display:flex;flex-direction:column;min-height:0;
   }
-  .scroll{overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px}
+  .scroll{height:38px;overflow:visible;padding:0;display:flex;flex-wrap:nowrap;align-items:center;gap:7px}
   .scroll::-webkit-scrollbar{width:9px}
   .scroll::-webkit-scrollbar-thumb{background:#22323f;border-radius:9px;border:2px solid var(--panel)}
-  #map{flex:1;min-width:0;background:#050809}
+  #map{flex:1;min-width:0;min-height:0;background:#050809}
 
-  section.block{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;overflow:hidden;flex:0 0 auto}
+  section.block{position:relative;flex:0 0 auto;min-width:0;background:transparent;border:none;border-radius:0;overflow:visible}
   .block > h2{
-    margin:0;padding:10px 13px;font-size:11px;letter-spacing:.9px;text-transform:uppercase;
-    color:var(--ink-2);display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line-soft);
-    background:linear-gradient(180deg,#16212b,#121a22);
+    margin:0;padding:8px 11px;font-size:10px;letter-spacing:.7px;text-transform:uppercase;white-space:nowrap;
+    color:var(--ink-2);display:flex;align-items:center;gap:7px;cursor:pointer;border:1px solid var(--line);border-radius:8px;
+    background:linear-gradient(180deg,#16212b,#121a22);user-select:none;
   }
+  .block > h2:hover,.block.open > h2{color:var(--ink);border-color:var(--optic)}
   .block > h2 .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--optic);letter-spacing:0}
-  .block .body{padding:13px}
+  .block .body{display:none}
+  .block.open .body{
+    display:block;position:fixed;top:0;left:0;z-index:3000;width:min(400px,calc(100vw - 20px));
+    max-height:calc(100dvh - 20px);overflow-y:auto;overscroll-behavior:contain;padding:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:11px;box-shadow:0 18px 35px #000a;
+  }
+  /* A rede principal é carregada exclusivamente pelo seletor suspenso. */
+  #dropMain,#mainEmpty,#mainLoaded,#assetSearchRow{display:none!important}
   .dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
   .dot.optic{background:var(--optic);box-shadow:0 0 8px -1px var(--optic)}
   .dot.done{background:var(--done)} .dot.warn{background:var(--warn)}
@@ -101,6 +109,9 @@
     cursor:pointer;transition:.15s;background:#0e1922;color:var(--ink-2);
   }
   .drop:hover,.drop.hot{border-color:var(--optic);background:#0d2129;color:var(--ink)}
+  .drop:focus-visible,.icon-btn:focus-visible,.btn:focus-visible,#btnSat:focus-visible,#btnLocate:focus-visible,#btnFit:focus-visible{
+    outline:2px solid var(--optic);outline-offset:2px;
+  }
   .drop svg{width:22px;height:22px;opacity:.8;margin-bottom:6px}
   .drop b{color:var(--ink);font-weight:600}
   .drop .hint{font-size:11px;color:var(--ink-3);margin-top:3px}
@@ -120,7 +131,7 @@
   .icon-btn svg{width:15px;height:15px}
 
   /* preventiva rows */
-  .prev-list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto;padding-right:4px}
+  .prev-list{display:flex;flex-direction:column;gap:8px;overflow:visible;padding-right:0}
   .prev-list::-webkit-scrollbar{width:9px}
   .prev-list::-webkit-scrollbar-thumb{background:#22323f;border-radius:9px;border:2px solid var(--panel-2)}
   .prev{border:1px solid var(--line);border-radius:9px;background:#0e1922;overflow:hidden}
@@ -192,7 +203,9 @@
     color:var(--ink);cursor:pointer;display:grid;place-items:center;backdrop-filter:blur(6px)}
   .map-btns button:hover{border-color:var(--optic);color:var(--optic)}
   .map-btns button.active{border-color:var(--optic);color:var(--optic)}
+  .map-btns button.locating svg{animation:locatePulse .9s ease-in-out infinite alternate}
   .map-btns svg{width:17px;height:17px}
+  @keyframes locatePulse{to{transform:scale(1.22);opacity:.55}}
 
   /* etiqueta "Preventiva + arquivo" fixa no mapa */
   .leaflet-tooltip.prev-tip{background:none;border:none;box-shadow:none;padding:0;white-space:nowrap;font:inherit}
@@ -230,17 +243,40 @@
   .cam-chip{display:inline-flex;align-items:center;gap:3px;font:600 10px var(--mono);color:var(--optic);
     background:#0a2a30;border:1px solid #114b54;border-radius:6px;padding:2px 6px;flex:0 0 auto}
   .cam-chip svg{width:11px;height:11px}
+  .notif-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:8px}
+  .notif-photo-wrap{position:relative}
+  .notif-photo-del{position:absolute;top:2px;right:2px;width:18px;height:18px;border-radius:50%;border:none;
+    background:#000000b0;color:#fff;font:700 12px var(--sans);cursor:pointer;display:grid;place-items:center;line-height:1;padding:0}
+  .notif-photo-add{display:grid;place-items:center;height:72px;border:1px dashed var(--optic-dim);border-radius:6px;
+    color:var(--optic);font:600 10px var(--sans);cursor:pointer;text-align:center;line-height:1.3}
+  .notif-photo-add input{display:none}
   /* lightbox */
   #lightbox{position:fixed;inset:0;z-index:4000;background:#000000e6;display:none;place-items:center;padding:26px;cursor:zoom-out}
   #lightbox.show{display:grid}
   #lightbox img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 24px 70px -12px #000}
+  .access-modal{position:fixed;inset:0;z-index:5000;display:none;place-items:center;padding:16px;background:#02070bd9;backdrop-filter:blur(7px)}
+  .access-modal.show{display:grid}.access-dialog{width:min(560px,100%);max-height:calc(100dvh - 32px);overflow:auto;padding:20px;border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:0 24px 70px #000}
+  .access-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}.access-head h3{margin:0;font-size:18px}.access-head p{margin:4px 0 0;color:var(--ink-3);font-size:11px;line-height:1.45}.access-head .icon-btn{margin-left:auto;flex:0 0 auto}
+  .access-form{display:grid;gap:10px}.access-form .btn-row{flex-wrap:wrap}.access-form .btn{flex:1 1 130px}.access-message{min-height:18px;margin-top:8px;color:var(--ink-3);font-size:11px;line-height:1.45}
+  .access-user{padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2)}.access-user b{display:block;font-size:13px;overflow-wrap:anywhere}.access-user small{color:var(--ink-3)}
+  .pending-badge{display:inline-grid;place-items:center;min-width:19px;height:19px;margin-left:2px;padding:0 5px;border-radius:10px;background:var(--danger);color:#fff;font:800 10px var(--mono);box-shadow:0 0 0 2px #13232d}.pending-badge[hidden],.pending-alert[hidden]{display:none!important}.pending-alert{margin-top:12px;padding:10px 12px;border:1px solid #6b4c16;border-radius:9px;background:#2a200d;color:#ffd98a;font-size:11px;line-height:1.45}.pending-alert b{color:#ffe9b4}
+  .access-create{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#0a141c}.access-create h4{grid-column:1/-1;margin:0;color:var(--optic);font-size:12px}.access-create .wide{grid-column:1/-1}.access-create .btn{grid-column:1/-1}
+  .access-list{display:grid;gap:8px;margin-top:12px}.access-list-title{margin:16px 0 0;font-size:12px;color:var(--ink-2)}.access-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:9px;background:#0a141c}.access-row .email{grid-column:1/-1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11px;color:var(--ink-3)}.access-row .profile-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:8px}.access-row select{min-width:0}.access-row label{font-size:10px;color:var(--ink-2)}.access-row .save-user{min-width:76px}.access-row .status{grid-column:1/-1;font:700 10px var(--mono);color:var(--warn)}.access-row .status.approved{color:var(--done)}.access-row .manage-points{grid-column:1/-1}
+  .point-editor{margin-top:12px;padding:12px;border:1px solid var(--optic-dim);border-radius:10px;background:#07151b}.point-editor-head{display:flex;align-items:flex-start;gap:8px}.point-editor-head h4{margin:0;font-size:13px;color:var(--optic)}.point-editor-head small{display:block;margin-top:3px;color:var(--ink-3)}.point-editor-head .icon-btn{margin-left:auto}.point-tools{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}.point-tools .btn{flex:1 1 120px}.point-results{display:grid;gap:6px;max-height:300px;overflow:auto;padding-right:3px}.point-group{margin:10px 0 5px;color:var(--ink-2);font:700 10px var(--mono);text-transform:uppercase}.point-option{display:flex;align-items:flex-start;gap:8px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#0a141c;font-size:11px;line-height:1.35}.point-option input{margin-top:2px;flex:0 0 auto}.point-option span{min-width:0;overflow-wrap:anywhere}.point-note{margin:7px 0;color:var(--ink-3);font-size:10px}
+  .auth-gate{position:fixed;inset:0;z-index:4500;display:none;place-items:center;padding:20px;background:radial-gradient(circle at 50% 30%,#12303c 0,#071016 45%,#020608 100%)}body[data-access="public"] .auth-gate{display:grid}.auth-gate-card{width:min(440px,100%);padding:26px;border:1px solid var(--line);border-radius:16px;background:#0b151dcc;text-align:center;box-shadow:0 24px 70px #000}.auth-gate-card .spark{display:grid;place-items:center;width:48px;height:48px;margin:0 auto 14px;border-radius:14px;background:var(--optic);color:#062b30}.auth-gate-card h1{margin:0;font-size:22px}.auth-gate-card p{margin:9px 0 18px;color:var(--ink-3);font-size:12px;line-height:1.55}.auth-gate-card .btn{width:100%;justify-content:center}
+  body[data-access="public"] #btnSavePrev,body[data-access="public"] #clearAll,body[data-access="public"] #dropPrev,body[data-access="public"] #dropNotif,body[data-access="public"] #mainFolderRow,
+  body[data-access="viewer"] #btnSavePrev,body[data-access="viewer"] #clearAll,body[data-access="viewer"] #dropPrev,body[data-access="viewer"] #dropNotif,body[data-access="viewer"] #mainFolderRow{display:none!important}
+  body[data-access="public"] .prev input,body[data-access="viewer"] .prev input{pointer-events:none;opacity:.72}
+  body[data-access="public"] [data-act="vis"],body[data-access="public"] [data-act="del"],body[data-access="public"] [data-act="mvis"],body[data-access="public"] [data-act="mdel"],body[data-access="public"] [data-act="ndel"],body[data-access="public"] .notif-btn,body[data-access="public"] .notif-photo-add,body[data-access="public"] .notif-photo-del,
+  body[data-access="viewer"] [data-act="vis"],body[data-access="viewer"] [data-act="del"],body[data-access="viewer"] [data-act="mvis"],body[data-access="viewer"] [data-act="mdel"],body[data-access="viewer"] [data-act="ndel"],body[data-access="viewer"] .notif-btn,body[data-access="viewer"] .notif-photo-add,body[data-access="viewer"] .notif-photo-del{display:none!important}
+  body[data-access="editor"] #clearAll,body[data-access="editor"] #mainFolderRow,body[data-access="editor"] [data-act="del"],body[data-access="editor"] [data-act="mdel"],body[data-access="editor"] [data-act="ndel"]{display:none!important}
 
   /* toast */
   #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);z-index:3000;
     background:#12202a;border:1px solid var(--line);border-left:3px solid var(--optic);border-radius:9px;
     padding:11px 15px;font-size:13px;box-shadow:0 12px 40px -12px #000;opacity:0;pointer-events:none;transition:.25s;max-width:70vw}
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-  #toast.err{border-left-color:var(--danger)} #toast.ok{border-left-color:var(--done)}
+  #toast.err{border-left-color:var(--danger)} #toast.ok{border-left-color:var(--done)} #toast.warn{border-left-color:var(--warn)}
 
   .leaflet-container{background:#050809}
   .save-badge{font-size:10px;color:var(--ink-3);display:flex;align-items:center;gap:5px;justify-content:center;padding-top:2px}
@@ -248,16 +284,43 @@
 
   @media (max-width:820px){
     :root{--side:100%}
-    .stage{flex-direction:column}
-    aside{width:100%;flex:0 0 auto;max-height:46vh;border-right:none;border-bottom:1px solid var(--line)}
-    #map{flex:1;min-height:280px}
+    header{height:48px;flex-basis:48px;padding:0 10px;gap:8px}
+    .brand{min-width:0}.brand b{font-size:14px}.brand small{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .brand .spark{width:24px;height:24px;flex:0 0 24px}.brand .spark svg{width:14px;height:14px}
+    .toolbar{display:flex;flex-wrap:wrap;align-items:stretch;gap:6px;padding:6px 8px;overflow:visible;white-space:normal}
+    .toolbar > .btn{flex:1 1 calc(33.333% - 6px);min-width:0;min-height:34px;padding:6px 7px;line-height:1.15;text-align:center}
+    .toolbar > .save-badge{display:none}
+    .toolbar > aside{order:20;width:100%;flex:1 0 100%;overflow-x:auto;overflow-y:visible}
+    .scroll{width:max-content;min-width:100%;height:38px;padding:0;gap:6px}
+    .block.open .body{width:calc(100vw - 20px)}
+    .stage{min-height:0}
+    #map{flex:1;min-height:300px}
+    .legend{left:8px;bottom:8px;max-width:calc(100% - 68px);max-height:30%;overflow-y:auto}
+    .map-btns{right:8px;top:8px}
+    #toast{bottom:12px;max-width:calc(100vw - 20px);width:max-content}
     .kpis{display:none}
   }
-  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media (max-width:520px){
+    .toolbar > .btn{flex-basis:calc(50% - 4px)}
+    .brand small{display:none}
+    .leaflet-tooltip.prev-tip{display:none}
+    .leaflet-popup-content{max-width:calc(100vw - 80px)}
+    .access-dialog{padding:15px}.access-create{grid-template-columns:1fr}.access-create h4,.access-create .wide,.access-create .btn{grid-column:1}.access-row{grid-template-columns:1fr 98px}.access-row .profile-fields{grid-template-columns:1fr}.access-row .save-user{grid-column:1/-1}.access-row label{align-self:center}.point-editor{padding:10px}.point-results{max-height:250px}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   :focus-visible{outline:2px solid var(--optic);outline-offset:2px}
 </style>
 </head>
-<body>
+<body data-access="public">
+
+<div class="auth-gate" id="authGate">
+  <div class="auth-gate-card">
+    <span class="spark"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg></span>
+    <h1>Conteúdo protegido</h1>
+    <p>Entre com uma conta aprovada ou solicite seu acesso. O administrador definirá quais preventivas e pontos ficarão disponíveis para você.</p>
+    <button class="btn primary" id="gateAccess" type="button">Entrar ou solicitar acesso</button>
+  </div>
+</div>
 
 <header>
   <div class="brand">
@@ -285,6 +348,10 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
     Relatório CSV
   </button>
+  <a class="btn" href="resumo-preventivas.html" aria-label="Abrir resumo das preventivas realizadas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+    Resumo Preventivas
+  </a>
   <button class="btn" id="clearAll">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
     Limpar tudo
@@ -293,10 +360,11 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
     ↻ Recarregar
   </button>
-  <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Sessão salva localmente</div>
-</div>
-
-<div class="stage">
+  <button class="btn" id="btnAccess" type="button" aria-label="Entrar ou gerenciar acessos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
+    <span id="accessLabel">Entrar</span><span class="pending-badge" id="pendingAccessBadge" hidden>0</span>
+  </button>
+  <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Conectando ao Supabase</div>
   <aside>
     <div class="scroll">
 
@@ -308,19 +376,20 @@
             <label id="mainFolderLabel">Rede principal por UF — arquivos na nuvem (Ctrl/Cmd+clique para selecionar vários)</label>
             <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Carregando lista…</option></select>
             <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
+            <button class="btn" id="btnClearMainSelection" type="button" style="margin-top:7px">Limpar seleções</button>
           </div>
-          <div class="drop" id="dropMain">
+          <div class="drop" id="dropMain" role="button" tabindex="0" aria-label="Anexar arquivos KMZ ou KML da rede principal">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0-12L8 7m4-4l4 4"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
             <div><b>Anexar KMZ principal</b></div>
             <div class="hint">Arraste um ou vários arquivos, ou clique — .kmz ou .kml</div>
           </div>
           <div class="empty" id="mainEmpty" style="margin-top:11px">Nenhum arquivo da rede principal anexado.</div>
           <div id="mainLoaded" style="display:none;margin-top:11px"></div>
-          <div class="field" style="margin-top:11px">
+          <div class="field" id="assetSearchRow" style="margin-top:11px">
             <label>Buscar CTO/CEO no mapa</label>
             <div style="display:flex;gap:6px">
               <input type="text" id="assetSearch" placeholder="ex.: CTO-15" style="flex:1">
-              <button class="icon-btn" id="assetSearchBtn" title="Buscar" style="border:1px solid var(--line);flex:0 0 auto">
+              <button class="icon-btn" id="assetSearchBtn" type="button" aria-label="Buscar CTO ou CEO" title="Buscar" style="border:1px solid var(--line);flex:0 0 auto">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
               </button>
             </div>
@@ -333,7 +402,7 @@
       <section class="block">
         <h2><span class="dot done"></span>Preventivas realizadas <span class="tag" id="prevTag">0</span></h2>
         <div class="body">
-          <div class="drop" id="dropPrev" style="margin-bottom:11px">
+          <div class="drop" id="dropPrev" role="button" tabindex="0" aria-label="Adicionar arquivos KMZ ou KML de preventivas" style="margin-bottom:11px">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
             <div><b>Adicionar preventiva</b></div>
             <div class="hint">Um ou vários KMZ secundários de uma vez</div>
@@ -350,7 +419,7 @@
         <h2><span class="dot warn"></span>Nort. Equatorial <span class="tag" id="notifTag"></span></h2>
         <div class="body">
           <label class="switch" style="margin:0 0 11px"><input type="checkbox" id="showNotif" checked><span class="track"></span>Mostrar notificações no mapa</label>
-          <div class="drop" id="dropNotif" style="margin-bottom:11px">
+          <div class="drop" id="dropNotif" role="button" tabindex="0" aria-label="Anexar planilha de notificações" style="margin-bottom:11px">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 4v16"/></svg>
             <div><b>Anexar planilha de notificações</b></div>
             <div class="hint">.xlsx com a aba MAPEAMENTO_POSTES — busca os links da Coluna C</div>
@@ -389,18 +458,63 @@
 
     </div>
   </aside>
+</div>
 
+<div class="stage">
   <div id="map">
     <div class="map-btns">
       <button id="btnSat" title="Alternar satélite / ruas"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12a10 10 0 0 1 20 0 10 10 0 0 1-20 0z"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/></svg></button>
+      <button id="btnLocate" title="Centralizar no meu local"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="9" opacity=".45"/></svg></button>
       <button id="btnFit" title="Enquadrar tudo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     </div>
     <div class="legend" id="legend" style="display:none"><h4>Legenda</h4><div id="legendItems"></div></div>
   </div>
 </div>
 
+<div class="access-modal" id="accessModal" role="dialog" aria-modal="true" aria-labelledby="accessTitle">
+  <div class="access-dialog">
+    <div class="access-head"><div><h3 id="accessTitle">Acessos do sistema</h3><p>O conteúdo é exibido somente após aprovação do Administrador.</p></div><button class="icon-btn" id="closeAccess" type="button" aria-label="Fechar acessos">×</button></div>
+    <div id="signedOutAccess" class="access-form">
+      <div class="field"><label>Nome completo (para solicitar acesso)</label><input id="requestAccessName" type="text" maxlength="120" autocomplete="name" placeholder="Seu nome"></div>
+      <div class="field"><label>Telefone (opcional)</label><input id="requestAccessPhone" type="tel" maxlength="40" autocomplete="tel" placeholder="(00) 00000-0000"></div>
+      <div class="field"><label>E-mail</label><input id="accessEmail" type="email" autocomplete="username" placeholder="seu@email.com"></div>
+      <div class="field"><label>Senha</label><input id="accessPassword" type="password" autocomplete="current-password" minlength="8" placeholder="Mínimo de 8 caracteres"></div>
+      <div class="btn-row"><button class="btn primary" id="loginAccess" type="button">Entrar</button><button class="btn" id="requestAccess" type="button">Solicitar acesso</button></div>
+      <button class="btn" id="resetAccess" type="button">Recuperar senha</button>
+    </div>
+    <div id="signedInAccess" hidden>
+      <div class="access-user"><b id="accessUserEmail"></b><small id="accessRoleText"></small></div>
+      <div class="btn-row" style="margin-top:10px"><button class="btn" id="logoutAccess" type="button">Sair</button><button class="btn" id="refreshAccess" type="button" hidden>Atualizar usuários</button></div>
+      <div id="adminAccessPanel" hidden>
+        <div class="pending-alert" id="pendingAccessAlert" hidden><b id="pendingAccessText"></b><br>Abra uma conta pendente, configure os pontos permitidos e marque “Aprovado”.</div>
+        <div class="access-create">
+          <h4>Criar nova conta</h4>
+          <div class="field"><label>Nome completo</label><input id="newAccessName" type="text" maxlength="120" placeholder="Nome do usuário"></div>
+          <div class="field"><label>Telefone</label><input id="newAccessPhone" type="tel" maxlength="40" placeholder="(00) 00000-0000"></div>
+          <div class="field wide"><label>E-mail</label><input id="newAccessEmail" type="email" autocomplete="off" placeholder="usuario@email.com"></div>
+          <div class="field"><label>Senha temporária</label><input id="newAccessPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo de 8 caracteres"></div>
+          <div class="field"><label>Tipo de acesso</label><select id="newAccessRole"><option value="viewer">Visualizador</option><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>
+          <p class="empty wide" style="margin:0;padding:0;text-align:left">A conta será criada como pendente. Depois selecione os pontos e marque o acesso como aprovado.</p>
+          <button class="btn primary" id="createAccessUser" type="button">Criar conta pendente</button>
+        </div>
+        <h4 class="access-list-title">Contas cadastradas</h4>
+        <div class="access-list" id="accessList"></div>
+        <div class="point-editor" id="pointAccessEditor" hidden>
+          <div class="point-editor-head"><div><h4 id="pointAccessTitle">Pontos permitidos</h4><small id="pointAccessCount"></small></div><button class="icon-btn" id="closePointAccess" type="button" aria-label="Fechar seleção de pontos">×</button></div>
+          <div class="field" style="margin-top:10px"><label>Buscar preventiva, OS, ponto ou município</label><input id="pointAccessSearch" type="search" placeholder="Digite para filtrar"></div>
+          <div class="point-tools"><button class="btn" id="selectVisiblePoints" type="button">Marcar resultados</button><button class="btn" id="clearUserPoints" type="button">Limpar seleção</button></div>
+          <div class="point-results" id="pointAccessResults"></div>
+          <p class="point-note" id="pointAccessNote"></p>
+          <button class="btn primary" id="savePointAccess" type="button" style="width:100%;justify-content:center">Salvar pontos permitidos</button>
+        </div>
+      </div>
+    </div>
+    <div class="access-message" id="accessMessage" aria-live="polite"></div>
+  </div>
+</div>
+
 <input type="file" id="fileMain" accept=".kmz,.kml" multiple hidden>
-<input type="file" id="filePrev" accept=".kmz,.kml" multiple hidden>
+<input type="file" id="filePrev" accept=".kmz,.kml,application/vnd.google-earth.kmz,application/vnd.google-earth.kml+xml,application/zip" multiple hidden>
 <input type="file" id="fileNotif" accept=".xlsx" multiple hidden><div id="lightbox"><img alt="Foto da preventiva"></div>
 <div id="toast"></div>
 
@@ -411,9 +525,12 @@
 const SUPABASE_URL = "https://hhwghwqynrxrksrzjvgc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let publicSyncChannel=null;
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
+let currentUser=null,currentRole="public",protectedDataLoaded=false,pendingAccessCount=0,pendingNoticeShown=false,accessRefreshPromise=null;
+let pointAccessUser=null,pointAccessCatalog={preventivas:[],notifications:[]},selectedPreventivaIds=new Set(),selectedNotificationIds=new Set();
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
 const PHOTOS = {};
@@ -463,11 +580,41 @@ const canvas = L.canvas({padding:0.5});
 const tileStreet = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:20,attribution:"© OpenStreetMap"});
 const tileSat = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,attribution:"© Esri"});
 let satOn=false; tileStreet.addTo(map);
+document.getElementById("btnSat").setAttribute("aria-label","Alternar entre mapa de ruas e satélite");
+document.getElementById("btnLocate").setAttribute("aria-label","Centralizar no meu local");
+document.getElementById("btnFit").setAttribute("aria-label","Enquadrar todos os elementos no mapa");
 document.getElementById("btnSat").onclick = function(){
   satOn=!satOn; this.classList.toggle("active",satOn);
   if(satOn){map.removeLayer(tileStreet);tileSat.addTo(map);} else {map.removeLayer(tileSat);tileStreet.addTo(map);}
 };
 document.getElementById("btnFit").onclick = fitAll;
+
+let userLocationMarker=null,userAccuracyCircle=null;
+document.getElementById("btnLocate").onclick=function(){
+  const button=this;
+  if(!navigator.geolocation){toast("Este dispositivo não oferece localização pelo navegador.","err");return;}
+  button.disabled=true;button.classList.add("locating");
+  toast("Buscando sua localização…");
+  navigator.geolocation.getCurrentPosition(position=>{
+    const lat=position.coords.latitude,lng=position.coords.longitude;
+    const accuracy=Math.max(0,position.coords.accuracy||0);
+    if(userLocationMarker) map.removeLayer(userLocationMarker);
+    if(userAccuracyCircle) map.removeLayer(userAccuracyCircle);
+    userAccuracyCircle=L.circle([lat,lng],{radius:accuracy||8,color:"#2ad7e8",weight:1,opacity:.65,fillColor:"#2ad7e8",fillOpacity:.1,interactive:false}).addTo(map);
+    userLocationMarker=L.circleMarker([lat,lng],{radius:8,color:"#e8f1f5",weight:3,fillColor:"#2ad7e8",fillOpacity:1}).addTo(map)
+      .bindPopup('<div class="pv-pop"><b>Sua localização atual</b><div class="pv-sub">Precisão aproximada: '+Math.round(accuracy)+' m</div></div>');
+    const zoom=accuracy>1500?14:accuracy>500?15:accuracy>150?16:18;
+    map.setView([lat,lng],zoom,{animate:true});
+    userLocationMarker.openPopup();
+    button.classList.add("active");
+    toast("Localização encontrada · precisão aproximada de "+Math.round(accuracy)+" m.","ok");
+    button.disabled=false;button.classList.remove("locating");
+  },error=>{
+    const messages={1:"Permissão de localização negada. Autorize o acesso à localização nas configurações do navegador.",2:"Não foi possível obter sua localização. Ative o GPS e tente novamente.",3:"A busca da localização demorou demais. Tente novamente em um local com melhor sinal."};
+    toast(messages[error.code]||"Não foi possível obter sua localização.","err");
+    button.disabled=false;button.classList.remove("locating");
+  },{enableHighAccuracy:true,timeout:15000,maximumAge:10000});
+};
 
 let mainPointMarkers=[], mainAssets=[];
 const mainLayerGroups = {}; // id -> L.geoJSON layer
@@ -477,9 +624,265 @@ const notifLayerGroup = L.featureGroup().addTo(map);
 
 /* ============ Utilidades ============ */
 const $=id=>document.getElementById(id);
+$("mainFolderLabel").textContent="Selecione um ou mais arquivos KMZ/KML da rede principal";
+const panelBlocks=Array.from(document.querySelectorAll(".scroll > .block"));
+function closePanels(except){
+  panelBlocks.forEach(block=>{
+    if(block!==except){
+      block.classList.remove("open");
+      const trigger=block.querySelector("h2");
+      if(trigger) trigger.setAttribute("aria-expanded","false");
+    }
+  });
+}
+function collapsePanelsAfterAction(){
+  closePanels();
+  syncMapLayout();
+}
+function positionOpenPanel(block){
+  const trigger=block.querySelector("h2");
+  const body=block.querySelector(".body");
+  if(!trigger||!body) return;
+  const rect=trigger.getBoundingClientRect();
+  const panelWidth=Math.min(400,window.innerWidth-20);
+  const top=Math.max(10,rect.bottom+6);
+  body.style.left=Math.max(10,Math.min(rect.left,window.innerWidth-panelWidth-10))+"px";
+  body.style.top=top+"px";
+  body.style.maxHeight=Math.max(180,window.innerHeight-top-10)+"px";
+  body.style.overflowY="auto";
+}
+panelBlocks.forEach((block,index)=>{
+  const trigger=block.querySelector("h2");
+  const body=block.querySelector(".body");
+  if(!trigger||!body) return;
+  const panelId="compact-panel-"+index;
+  body.id=panelId;
+  trigger.setAttribute("role","button");
+  trigger.setAttribute("tabindex","0");
+  trigger.setAttribute("aria-controls",panelId);
+  trigger.setAttribute("aria-expanded","false");
+  const toggle=()=>{
+    const willOpen=!block.classList.contains("open");
+    closePanels(block);
+    block.classList.toggle("open",willOpen);
+    trigger.setAttribute("aria-expanded",String(willOpen));
+    if(willOpen) positionOpenPanel(block);
+    syncMapLayout();
+  };
+  trigger.onclick=toggle;
+  trigger.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();} };
+});
+document.addEventListener("click",e=>{ if(!e.target.closest(".scroll > .block")) collapsePanelsAfterAction(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") collapsePanelsAfterAction(); });
 function toast(msg,type){const t=$("toast");t.textContent=msg;t.className="show "+(type||"");clearTimeout(t._t);t._t=setTimeout(()=>t.className="",3200);}
 function uid(){return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+const roleNames={public:"Público",viewer:"Visualizador",editor:"Editor",admin:"Administrador"};
+const canEdit=()=>currentRole==="editor"||currentRole==="admin";
+const canAdmin=()=>currentRole==="admin";
+const hasContentAccess=()=>!!currentUser&&currentRole!=="public";
+function requireEditor(){if(canEdit())return true;toast("Entre com um acesso de Editor ou Administrador para alterar dados.","err");openAccessModal();return false;}
+function requireAdmin(){if(canAdmin())return true;toast("Esta ação exige acesso de Administrador.","err");openAccessModal();return false;}
+function setAccessMessage(message,isError){const el=$("accessMessage");el.textContent=message||"";el.style.color=isError?"#ffc1bf":"";}
+function openAccessModal(){
+  $("accessModal").classList.add("show");setAccessMessage("");
+  if(currentUser&&canAdmin()) loadAccessUsers();
+  else if(!currentUser) setTimeout(()=>$("accessEmail").focus(),60);
+}
+function closeAccessModal(){$("accessModal").classList.remove("show");}
+function applyPermissions(){
+  document.body.dataset.access=currentRole;
+  $("accessLabel").textContent=currentUser?roleNames[currentRole]:"Entrar";
+  $("signedOutAccess").hidden=!!currentUser;$("signedInAccess").hidden=!currentUser;
+  $("adminAccessPanel").hidden=!canAdmin();$("refreshAccess").hidden=!canAdmin();
+  if(currentUser){$("accessUserEmail").textContent=currentUser.email||"Usuário";$("accessRoleText").textContent="Perfil: "+roleNames[currentRole];}
+  document.querySelectorAll("#prevList input").forEach(input=>input.disabled=!canEdit());
+  if(!canAdmin())clearPendingAccessNotice();
+}
+function clearPendingAccessNotice(){
+  pendingAccessCount=0;pendingNoticeShown=false;$("pendingAccessBadge").hidden=true;$("pendingAccessAlert").hidden=true;$("btnAccess").setAttribute("aria-label","Entrar ou gerenciar acessos");
+}
+async function refreshPendingAccess(announce){
+  if(!canAdmin()){clearPendingAccessNotice();return;}
+  const previous=pendingAccessCount;
+  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,created_at").eq("active",false).is("approved_at",null).order("created_at",{ascending:false});
+  if(error){console.warn("pending access",error);return;}
+  pendingAccessCount=(data||[]).length;
+  const badge=$("pendingAccessBadge"),alert=$("pendingAccessAlert"),label=pendingAccessCount+" cadastro"+(pendingAccessCount===1?"":"s")+" aguardando aprovação";
+  badge.textContent=pendingAccessCount>99?"99+":String(pendingAccessCount);badge.hidden=pendingAccessCount===0;
+  alert.hidden=pendingAccessCount===0;$("pendingAccessText").textContent=label.charAt(0).toUpperCase()+label.slice(1)+".";
+  $("btnAccess").setAttribute("aria-label",pendingAccessCount?"Gerenciar acessos — "+label:"Gerenciar acessos");
+  if(!pendingAccessCount){pendingNoticeShown=false;return;}
+  if(announce&&(!pendingNoticeShown||pendingAccessCount>previous)){
+    const newest=(data||[])[0],person=newest&&(newest.full_name||newest.email);
+    toast(pendingAccessCount===1?"Novo cadastro aguardando aprovação"+(person?": "+person:"")+".":label.charAt(0).toUpperCase()+label.slice(1)+".","warn");
+    pendingNoticeShown=true;
+  }
+}
+async function refreshAccessSession(){
+  if(accessRefreshPromise)return accessRefreshPromise;
+  accessRefreshPromise=(async()=>{
+    const previousUser=currentUser,previousRole=currentRole;
+    const {data:sessionData,error:sessionError}=await sb.auth.getSession();
+    if(sessionError){
+      console.warn("Não foi possível atualizar a sessão",sessionError);
+      if(previousUser&&previousRole!=="public")return true;
+      currentUser=null;currentRole="public";applyPermissions();return false;
+    }
+    const session=sessionData&&sessionData.session;
+    if(!session){currentUser=null;currentRole="public";applyPermissions();return false;}
+    const sessionUser=session.user;
+    const profileResult=await withRetry(()=>sb.from("user_access").select("role,active").eq("user_id",sessionUser.id).maybeSingle(),3,500);
+    if(profileResult.error){
+      console.warn("Não foi possível atualizar o perfil de acesso",profileResult.error);
+      if(previousUser&&previousUser.id===sessionUser.id&&previousRole!=="public"){
+        currentUser=sessionUser;currentRole=previousRole;applyPermissions();return true;
+      }
+      currentUser=sessionUser;currentRole="public";applyPermissions();setAccessMessage("Não foi possível validar o perfil agora. Verifique a conexão e tente novamente.",true);return false;
+    }
+    currentUser=sessionUser;
+    if(profileResult.data&&profileResult.data.active)currentRole=profileResult.data.role;
+    else if(profileResult.data&&!profileResult.data.active){
+      await sb.auth.signOut({scope:"local"});currentUser=null;currentRole="public";setAccessMessage("Sua solicitação está aguardando aprovação do Administrador.",true);
+    }else currentRole="public";
+    applyPermissions();
+    if(canAdmin())await refreshPendingAccess(false);
+    return hasContentAccess();
+  })();
+  try{return await accessRefreshPromise;}finally{accessRefreshPromise=null;}
+}
+async function ensureEditorAccess(){
+  const allowed=await refreshAccessSession();
+  if(allowed&&canEdit())return true;
+  if(currentUser)toast("Seu perfil não possui permissão para anexar preventivas.","err");
+  else{toast("Entre novamente para anexar a preventiva.","err");openAccessModal();}
+  return false;
+}
+function pointLabel(notification){return [notification.os,notification.name,notification.municipio].filter(Boolean).join(" — ")||notification.id;}
+function filteredPointCatalog(){
+  const term=$("pointAccessSearch").value.trim().toLocaleLowerCase("pt-BR");
+  const match=value=>!term||String(value||"").toLocaleLowerCase("pt-BR").includes(term);
+  return {
+    preventivas:pointAccessCatalog.preventivas.filter(p=>match([p.name,p.date,p.ga].join(" "))),
+    notifications:pointAccessCatalog.notifications.filter(n=>match([n.os,n.name,n.municipio].join(" ")))
+  };
+}
+function updatePointAccessCount(){
+  $("pointAccessCount").textContent=selectedPreventivaIds.size+" preventiva(s) · "+selectedNotificationIds.size+" ponto(s) selecionado(s)";
+}
+function renderPointAccessOptions(){
+  if(!pointAccessUser)return;
+  const filtered=filteredPointCatalog(),shownNotifications=filtered.notifications.slice(0,200);
+  let html='<div class="point-group">Preventivas realizadas</div>';
+  html+=filtered.preventivas.map(p=>`<label class="point-option"><input type="checkbox" data-kind="preventiva" value="${esc(p.id)}"${selectedPreventivaIds.has(p.id)?" checked":""}><span><b>${esc(p.name)}</b>${p.date||p.ga?"<br>"+esc([p.date,p.ga].filter(Boolean).join(" · ")):""}</span></label>`).join("")||'<div class="empty">Nenhuma preventiva encontrada.</div>';
+  html+='<div class="point-group">Pontos de notificação</div>';
+  html+=shownNotifications.map(n=>`<label class="point-option"><input type="checkbox" data-kind="notification" value="${esc(n.id)}"${selectedNotificationIds.has(n.id)?" checked":""}><span>${esc(pointLabel(n))}</span></label>`).join("")||'<div class="empty">Nenhum ponto encontrado.</div>';
+  $("pointAccessResults").innerHTML=html;
+  $("pointAccessNote").textContent=filtered.notifications.length>200?"Mostrando os primeiros 200 de "+filtered.notifications.length+" pontos. Refine a busca ou use “Marcar resultados” para selecionar todos os encontrados.":filtered.notifications.length+" ponto(s) encontrado(s).";
+  $("pointAccessResults").querySelectorAll('input[type="checkbox"]').forEach(input=>input.onchange=()=>{
+    const set=input.dataset.kind==="preventiva"?selectedPreventivaIds:selectedNotificationIds;
+    input.checked?set.add(input.value):set.delete(input.value);updatePointAccessCount();
+  });
+  updatePointAccessCount();
+}
+async function openPointAccess(user){
+  pointAccessUser=user;$("pointAccessEditor").hidden=false;$("pointAccessTitle").textContent="Pontos permitidos · "+(user.full_name||user.email);$("pointAccessResults").innerHTML='<div class="empty">Carregando pontos…</div>';
+  const [preventivasRes,notificationsRes,userPrevRes,userNotifRes]=await Promise.all([
+    sb.from("preventivas").select("id,name,date,ga").order("created_at"),
+    sb.from("notifications").select("id,os,name,municipio").order("created_at"),
+    sb.from("user_preventiva_access").select("preventiva_id").eq("user_id",user.user_id),
+    sb.from("user_notification_access").select("notification_id").eq("user_id",user.user_id)
+  ]);
+  const error=preventivasRes.error||notificationsRes.error||userPrevRes.error||userNotifRes.error;
+  if(error){setAccessMessage("Não foi possível carregar os pontos: "+error.message,true);return;}
+  pointAccessCatalog={preventivas:preventivasRes.data||[],notifications:notificationsRes.data||[]};
+  selectedPreventivaIds=new Set((userPrevRes.data||[]).map(row=>row.preventiva_id));selectedNotificationIds=new Set((userNotifRes.data||[]).map(row=>row.notification_id));
+  $("pointAccessSearch").value="";renderPointAccessOptions();$("pointAccessEditor").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+async function savePointAccess(){
+  if(!pointAccessUser||!requireAdmin())return;
+  const button=$("savePointAccess");button.disabled=true;setAccessMessage("Salvando pontos permitidos…");
+  const userId=pointAccessUser.user_id;
+  const [deletePrev,deleteNotif]=await Promise.all([
+    sb.from("user_preventiva_access").delete().eq("user_id",userId),
+    sb.from("user_notification_access").delete().eq("user_id",userId)
+  ]);
+  let error=deletePrev.error||deleteNotif.error;
+  if(!error&&selectedPreventivaIds.size){const result=await sb.from("user_preventiva_access").insert([...selectedPreventivaIds].map(preventiva_id=>({user_id:userId,preventiva_id,created_by:currentUser.id})));error=result.error;}
+  if(!error&&selectedNotificationIds.size){
+    const rows=[...selectedNotificationIds].map(notification_id=>({user_id:userId,notification_id,created_by:currentUser.id}));
+    for(let i=0;i<rows.length&&!error;i+=500){const result=await sb.from("user_notification_access").insert(rows.slice(i,i+500));error=result.error;}
+  }
+  button.disabled=false;
+  if(error){setAccessMessage("Não foi possível salvar os pontos: "+error.message,true);return;}
+  setAccessMessage("Pontos permitidos salvos para "+(pointAccessUser.full_name||pointAccessUser.email)+".");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
+}
+async function loadAccessUsers(){
+  if(!canAdmin())return;
+  $("accessList").innerHTML='<div class="empty">Carregando usuários…</div>';
+  const {data,error}=await sb.from("user_access").select("user_id,email,full_name,phone,role,active,approved_at,created_at").order("active",{ascending:true}).order("created_at",{ascending:false});
+  if(error){setAccessMessage("Não foi possível carregar os usuários: "+error.message,true);return;}
+  $("accessList").innerHTML=(data||[]).map(user=>{const status=user.active?"Aprovado":user.approved_at?"Acesso suspenso":"Aguardando aprovação";return `<div class="access-row" data-user="${esc(user.user_id)}"><div class="email" title="${esc(user.email)}">${esc(user.email)}</div><div class="status${user.active?" approved":""}">${status}</div><div class="profile-fields"><div class="field"><label>Nome</label><input class="profile-name" type="text" maxlength="120" value="${esc(user.full_name||"")}" placeholder="Nome completo"></div><div class="field"><label>Telefone</label><input class="profile-phone" type="tel" maxlength="40" value="${esc(user.phone||"")}" placeholder="Telefone"></div></div><select aria-label="Perfil de ${esc(user.email)}"><option value="viewer"${user.role==="viewer"?" selected":""}>Visualizador</option><option value="editor"${user.role==="editor"?" selected":""}>Editor</option><option value="admin"${user.role==="admin"?" selected":""}>Administrador</option></select><label><input class="profile-active" type="checkbox"${user.active?" checked":""}> Aprovado</label><button class="btn save-user" type="button">Salvar</button>${user.role==="viewer"?'<button class="btn manage-points" type="button">Configurar preventivas e pontos</button>':""}</div>`;}).join("")||'<div class="empty">Nenhum usuário cadastrado.</div>';
+  $("accessList").querySelectorAll(".access-row").forEach(row=>{
+    const user=(data||[]).find(item=>item.user_id===row.dataset.user),select=row.querySelector("select"),active=row.querySelector(".profile-active"),name=row.querySelector(".profile-name"),phone=row.querySelector(".profile-phone"),button=row.querySelector(".save-user"),pointsButton=row.querySelector(".manage-points");
+    const save=async()=>{
+      button.disabled=true;select.disabled=true;active.disabled=true;name.disabled=true;phone.disabled=true;
+      const {error:updateError}=await sb.from("user_access").update({full_name:name.value.trim()||null,phone:phone.value.trim()||null,role:select.value,active:active.checked}).eq("user_id",row.dataset.user);
+      button.disabled=false;select.disabled=false;active.disabled=false;name.disabled=false;phone.disabled=false;
+      if(updateError){setAccessMessage(updateError.message,true);await loadAccessUsers();return;}
+      setAccessMessage("Perfil e permissão atualizados.");publicSyncChannel&&publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
+      if(row.dataset.user===currentUser.id) await refreshAccessSession();else{await refreshPendingAccess(false);await loadAccessUsers();}
+    };
+    button.onclick=save;if(pointsButton)pointsButton.onclick=()=>openPointAccess(user);
+  });
+}
+async function initAccess(){
+  $("btnAccess").onclick=openAccessModal;$("gateAccess").onclick=openAccessModal;$("closeAccess").onclick=closeAccessModal;
+  $("accessModal").onclick=e=>{if(e.target===$("accessModal"))closeAccessModal();};
+  $("loginAccess").onclick=async()=>{
+    const email=$("accessEmail").value.trim(),password=$("accessPassword").value;
+    if(!email||!password){setAccessMessage("Informe e-mail e senha.",true);return;}
+    setAccessMessage("Entrando…");const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error){setAccessMessage("Não foi possível entrar: "+error.message,true);return;}
+    const allowed=await refreshAccessSession();if(allowed){setAccessMessage("Acesso realizado com sucesso.");await loadProtectedData(false);closeAccessModal();}
+  };
+  $("requestAccess").onclick=async()=>{
+    const name=$("requestAccessName").value.trim(),phone=$("requestAccessPhone").value.trim(),email=$("accessEmail").value.trim(),password=$("accessPassword").value;
+    if(!name||!email||password.length<8){setAccessMessage("Informe nome, e-mail e uma senha com pelo menos 8 caracteres.",true);return;}
+    setAccessMessage("Enviando solicitação…");const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,phone},emailRedirectTo:location.origin+location.pathname}});
+    if(error){setAccessMessage("Não foi possível solicitar: "+error.message,true);return;}
+    if(data.session)await sb.auth.signOut({scope:"local"});
+    setAccessMessage("Solicitação criada. Confirme o e-mail, se solicitado, e aguarde a aprovação do Administrador.");
+  };
+  $("createAccessUser").onclick=async()=>{
+    if(!requireAdmin())return;
+    const button=$("createAccessUser"),payload={action:"create",full_name:$("newAccessName").value.trim(),phone:$("newAccessPhone").value.trim(),email:$("newAccessEmail").value.trim(),password:$("newAccessPassword").value,role:$("newAccessRole").value};
+    if(!payload.full_name||!payload.email||payload.password.length<8){setAccessMessage("Informe nome, e-mail e uma senha temporária com pelo menos 8 caracteres.",true);return;}
+    button.disabled=true;setAccessMessage("Criando conta…");
+    const {data,error}=await sb.functions.invoke("admin-users",{body:payload});
+    button.disabled=false;
+    if(error){let message=error.message;try{const detail=await error.context.json();message=detail.error||message;}catch(_){}setAccessMessage("Não foi possível criar: "+message,true);return;}
+    $("newAccessName").value="";$("newAccessPhone").value="";$("newAccessEmail").value="";$("newAccessPassword").value="";$("newAccessRole").value="viewer";
+    setAccessMessage("Conta pendente criada para "+(data.user&&data.user.email||payload.email)+". Configure os pontos e aprove o acesso.");await refreshPendingAccess(true);await loadAccessUsers();
+  };
+  $("resetAccess").onclick=async()=>{
+    const email=$("accessEmail").value.trim();if(!email){setAccessMessage("Informe o e-mail para recuperar a senha.",true);return;}
+    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    setAccessMessage(error?"Não foi possível enviar: "+error.message:"E-mail de recuperação enviado.",!!error);
+  };
+  $("logoutAccess").onclick=async()=>{await sb.auth.signOut();await refreshAccessSession();clearProtectedState();closeAccessModal();toast("Acesso encerrado.","ok");};
+  $("refreshAccess").onclick=loadAccessUsers;
+  $("closePointAccess").onclick=()=>{$("pointAccessEditor").hidden=true;pointAccessUser=null;};
+  $("pointAccessSearch").oninput=renderPointAccessOptions;
+  $("selectVisiblePoints").onclick=()=>{const filtered=filteredPointCatalog();filtered.preventivas.forEach(p=>selectedPreventivaIds.add(p.id));filtered.notifications.forEach(n=>selectedNotificationIds.add(n.id));renderPointAccessOptions();};
+  $("clearUserPoints").onclick=()=>{selectedPreventivaIds.clear();selectedNotificationIds.clear();renderPointAccessOptions();};
+  $("savePointAccess").onclick=savePointAccess;
+  sb.auth.onAuthStateChange(()=>setTimeout(async()=>{const allowed=await refreshAccessSession();if(allowed&&!protectedDataLoaded)await loadProtectedData(true);if(!allowed)clearProtectedState();},0));
+  const allowed=await refreshAccessSession();if(allowed)await loadProtectedData(false);else clearProtectedState();
+}
+function labelIconButtons(root){
+  root.querySelectorAll("button.icon-btn[title]").forEach(button=>button.setAttribute("aria-label",button.title));
+}
 function todayISO(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
 
 function haversine(aLat,aLng,bLat,bLng){
@@ -530,16 +933,25 @@ function statsOf(gj){
   return {pts,lin,pol,total:(gj.features||[]).length};
 }
 
-/* extensão total das linhas (trajeto percorrido) em metros */
+/* extensão do trajeto em metros. Quando o KML não possui LineString, usa a
+   sequência dos pontos na ordem em que aparecem no arquivo. */
 function lineLength(gj){
-  let m=0;
+  let m=0, points=[];
   const walk=coords=>{ for(let i=1;i<coords.length;i++){ const a=coords[i-1],b=coords[i]; m+=haversine(a[1],a[0],b[1],b[0]); } };
   const handle=g=>{ if(!g)return;
     if(g.type==="LineString") walk(g.coordinates);
     else if(g.type==="MultiLineString") g.coordinates.forEach(walk);
     else if(g.type==="GeometryCollection") (g.geometries||[]).forEach(handle);
   };
+  const collect=g=>{ if(!g)return;
+    if(g.type==="Point") points.push(g.coordinates);
+    else if(g.type==="MultiPoint") points.push(...g.coordinates);
+    else if(g.type==="GeometryCollection") (g.geometries||[]).forEach(collect);
+  };
   (gj.features||[]).forEach(f=>handle(f.geometry));
+  if(m>0) return m;
+  (gj.features||[]).forEach(f=>collect(f.geometry));
+  walk(points);
   return m;
 }
 function fmtDist(m){ return m>=1000 ? (m/1000).toFixed(2).replace(".",",")+" km" : Math.round(m)+" m"; }
@@ -685,15 +1097,32 @@ function fmtPlacemarkName(n){
   return s;
 }
 function parseNotifDesc(desc){
-  const parts=String(desc||"").split(/<br\s*\/?>/i).map(s=>s.trim()).filter(Boolean);
+  const parts=String(desc||"").split(/<br\s*\/?>|\r?\n/i).map(s=>s.trim()).filter(Boolean);
   let servico="", irregularidades=[];
+  const outros=[];
   parts.forEach(p=>{
     const mS=p.match(/^Servi[cç]os?:\s*(.*)$/i);
     const mI=p.match(/^Irregularidades:\s*(.*)$/i);
     if(mS) servico=mS[1];
     else if(mI) irregularidades=mI[1].split(";").map(s=>s.trim()).filter(Boolean);
+    else outros.push(p);
   });
-  return {servico,irregularidades};
+  return {servico,irregularidades,outros};
+}
+function notifPhotosHtml(n){
+  const photos=n.photos||[];
+  let html='<div class="notif-photos">';
+  photos.forEach(path=>{
+    const url=n._photoUrls&&n._photoUrls[path];
+    html+='<div class="notif-photo-wrap">'
+      +(url ? '<img class="pv-th" src="'+url+'" data-full="'+url+'" alt="foto da notificação">'
+             : '<div class="pv-noimg">Carregando…</div>')
+      +'<button class="notif-photo-del" data-photo-del="'+esc(path)+'" title="Remover foto">×</button>'
+      +'</div>';
+  });
+  html+='<label class="notif-photo-add">+ Foto<input type="file" accept="image/*" capture="environment" multiple data-photo-add></label>';
+  html+='</div>';
+  return html;
 }
 function notifPopupHtml(n){
   const done=n.status==="concluido";
@@ -703,17 +1132,58 @@ function notifPopupHtml(n){
   if(n.description==null){
     html+='<div style="color:var(--ink-3);font-size:11.5px">Carregando detalhes…</div>';
   }else{
-    const {servico,irregularidades}=parseNotifDesc(n.description);
+    const {servico,irregularidades,outros}=parseNotifDesc(n.description);
     if(servico) html+='<div>'+esc(servico)+'</div>';
     if(irregularidades.length) html+='<div style="margin-top:4px">'+irregularidades.map(i=>'<span class="chip">'+esc(i)+'</span>').join("")+'</div>';
+    if(outros.length) html+='<div style="margin-top:4px">'+outros.map(esc).join('<br>')+'</div>';
   }
+  if(n.descriptionError) html+='<div style="color:#f87171;font-size:11.5px;margin-top:4px">Não foi possível carregar os detalhes. Feche e toque novamente para tentar.</div>';
+  html+=notifPhotosHtml(n);
   html+='<button class="notif-btn'+(done?" done":"")+'" data-notif="'+n.id+'">'+(done?"↺ Reabrir":"✓ Marcar como concluído")+'</button></div>';
   return html;
+}
+async function ensureNotifPhotoUrls(m,n){
+  const missing=(n.photos||[]).filter(p=>!n._photoUrls||!n._photoUrls[p]);
+  if(!missing.length) return;
+  try{
+    const {data,error}=await sb.storage.from('notif-photos').createSignedUrls(missing,3600);
+    if(error) throw error;
+    n._photoUrls=n._photoUrls||{};
+    (data||[]).forEach((d,i)=>{ if(d&&d.signedUrl) n._photoUrls[missing[i]]=d.signedUrl; });
+  }catch(err){ console.warn("foto da notificação",err); return; }
+  if(m.isPopupOpen()){ m.setPopupContent(notifPopupHtml(n)); wireNotifPopupBtn(m,n); }
+}
+async function uploadNotifPhotos(m,n,fileList){
+  if(!requireEditor()) return;
+  const files=Array.from(fileList||[]);
+  if(!files.length) return;
+  for(const file of files){
+    const path=n.id+"/"+uid()+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    const {error}=await sb.storage.from('notif-photos').upload(path,file,{contentType:file.type||"image/jpeg"});
+    if(error){ toast("Erro ao enviar foto: "+error.message,"err"); continue; }
+    n.photos=[...(n.photos||[]),path];
+  }
+  const ok=await sbCall(()=>sb.from('notifications').update({photos:n.photos}).eq('id',n.id),"Erro ao salvar fotos");
+  if(ok) toast("Foto(s) adicionada(s).","ok");
+  m.setPopupContent(notifPopupHtml(n));
+  wireNotifPopupBtn(m,n);
+}
+async function deleteNotifPhoto(m,n,path){
+  if(!requireEditor()) return;
+  const {error}=await sb.storage.from('notif-photos').remove([path]);
+  if(error){ toast("Erro ao remover foto: "+error.message,"err"); return; }
+  n.photos=(n.photos||[]).filter(p=>p!==path);
+  if(n._photoUrls) delete n._photoUrls[path];
+  const ok=await sbCall(()=>sb.from('notifications').update({photos:n.photos}).eq('id',n.id),"Erro ao salvar fotos");
+  if(ok) toast("Foto removida.","ok");
+  m.setPopupContent(notifPopupHtml(n));
+  wireNotifPopupBtn(m,n);
 }
 function wireNotifPopupBtn(m,n){
   const el=m.getPopup()&&m.getPopup().getElement(); if(!el) return;
   const btn=el.querySelector("[data-notif]");
   if(btn) btn.onclick=()=>{
+    if(!requireEditor()) return;
     n.status = n.status==="concluido" ? "pendente" : "concluido";
     const done=n.status==="concluido";
     m.setStyle({fillColor:done?"#34d399":"#f87171",radius:done?5:6.5});
@@ -722,6 +1192,11 @@ function wireNotifPopupBtn(m,n){
     refresh();
     sbCall(()=>sb.from('notifications').update({status:n.status}).eq('id',n.id), "Erro ao salvar status");
   };
+  el.querySelectorAll(".pv-th[data-full]").forEach(img=>{ img.onclick=()=>openLightbox(img.dataset.full); });
+  const addInput=el.querySelector("[data-photo-add]");
+  if(addInput) addInput.onchange=()=>uploadNotifPhotos(m,n,addInput.files);
+  el.querySelectorAll("[data-photo-del]").forEach(delBtn=>{ delBtn.onclick=()=>deleteNotifPhoto(m,n,delBtn.dataset.photoDel); });
+  ensureNotifPhotoUrls(m,n);
 }
 function renderNotifMarker(n){
   if(notifMarkers[n.id]){ notifLayerGroup.removeLayer(notifMarkers[n.id]); delete notifMarkers[n.id]; }
@@ -735,10 +1210,12 @@ function renderNotifMarker(n){
     wireNotifPopupBtn(m,n);
     if(n.description==null){
       try{
-        const {data,error}=await sb.from('notifications').select('description').eq('id',n.id).single();
-        if(!error&&data){ n.description=data.description; }
-      }catch(err){ console.warn("detalhe da notificação",err); }
-      if(n.description==null) n.description=""; // evita nova tentativa a cada abertura
+        const {data,error}=await sb.from('notifications').select('description,photos').eq('id',n.id).single();
+        if(error) throw error;
+        n.description=data&&data.description!=null?data.description:"";
+        n.photos=data&&data.photos?data.photos:[];
+        n.descriptionError=false;
+      }catch(err){ n.descriptionError=true; console.warn("detalhe da notificação",err); }
       m.setPopupContent(notifPopupHtml(n));
       wireNotifPopupBtn(m,n);
     }
@@ -847,6 +1324,7 @@ function renderMainList(){
   tag.textContent=state.mains.length+" arquivo"+(state.mains.length>1?"s":"")+" · "+totalFeat+" feições";
   loaded.querySelectorAll("[data-act='mzoom']").forEach(b=>b.onclick=()=>{ const lg=mainLayerGroups[b.dataset.id]; if(lg)map.fitBounds(lg.getBounds(),{padding:[40,40]}); });
   loaded.querySelectorAll("[data-act='mvis']").forEach(b=>b.onclick=()=>{
+    if(!requireEditor()) return;
     const mo=state.mains.find(x=>x.id===b.dataset.id); if(!mo) return;
     mo.visible=!(mo.visible!==false);
     const lg=mainLayerGroups[mo.id];
@@ -855,6 +1333,7 @@ function renderMainList(){
     sbCall(()=>sb.from('mains').update({visible:mo.visible}).eq('id',mo.id), "Erro ao salvar visibilidade");
   });
   loaded.querySelectorAll("[data-act='mdel']").forEach(b=>b.onclick=()=>{
+    if(!requireAdmin()) return;
     if(!confirm("Remover este arquivo da rede principal?")) return;
     state.mains=state.mains.filter(x=>x.id!==b.dataset.id);
     renderMain(); refresh();
@@ -872,7 +1351,7 @@ function renderPrevList(){
     const nFotos = prevPhotoCount(p);
     const dist = lineLength(p.geojson);
     const distRow = dist>0
-      ? '<div class="dist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12a3 3 0 0 0 3 3h6"/><circle cx="6" cy="18" r="2"/><path d="M15 15l3 3-3 3"/></svg><b>'+fmtDist(dist)+'</b><span>percorridos</span></div>'
+      ? '<div class="dist"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12a3 3 0 0 0 3 3h6"/><circle cx="6" cy="18" r="2"/><path d="M15 15l3 3-3 3"/></svg><b>'+fmtDist(dist)+'</b><span>'+(s.lin?'percorridos':'estimados entre pontos')+'</span></div>'
       : '<div class="dist none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v12a3 3 0 0 0 3 3h6"/><circle cx="6" cy="18" r="2"/><path d="M15 15l3 3-3 3"/></svg><b>—</b><span>sem trajeto (linha) no KMZ</span></div>';
     const camChip = nFotos ? '<span class="cam-chip" title="'+nFotos+' foto(s) neste KMZ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg>'+nFotos+'</span>' : '';
     const el=document.createElement("div");
@@ -903,14 +1382,14 @@ function renderPrevList(){
     list.appendChild(el);
   });
 
-  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);refreshLegend();sbCall(()=>sb.from('preventivas').update({name:p.name}).eq('id',p.id),"Erro ao salvar nome");}});
-  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{const p=find(e.target.dataset.id);if(p){const f=e.target.dataset.field;p[f]=e.target.value;if(f==="date")renderPrev(p);sbCall(()=>sb.from('preventivas').update({[f]:p[f]}).eq('id',p.id),"Erro ao salvar "+f);}});
+  list.querySelectorAll(".nm").forEach(inp=>inp.onchange=e=>{if(!requireEditor())return;const p=find(e.target.dataset.id);if(p){p.name=e.target.value;renderPrev(p);refreshLegend();sbCall(()=>sb.from('preventivas').update({name:p.name}).eq('id',p.id),"Erro ao salvar nome");}});
+  list.querySelectorAll("[data-field]").forEach(inp=>inp.onchange=e=>{if(!requireEditor())return;const p=find(e.target.dataset.id);if(p){const f=e.target.dataset.field;p[f]=e.target.value;if(f==="date")renderPrev(p);sbCall(()=>sb.from('preventivas').update({[f]:p[f]}).eq('id',p.id),"Erro ao salvar "+f);}});
   list.querySelectorAll("[data-act]").forEach(b=>b.onclick=e=>{
     const p=find(b.dataset.id); if(!p) return;
     const act=b.dataset.act;
-    if(act==="vis"){ p.visible=!(p.visible!==false); renderPrev(p); refresh(); sbCall(()=>sb.from('preventivas').update({visible:p.visible}).eq('id',p.id),"Erro ao salvar visibilidade"); }
+    if(act==="vis"){ if(!requireEditor())return; p.visible=!(p.visible!==false); renderPrev(p); refresh(); sbCall(()=>sb.from('preventivas').update({visible:p.visible}).eq('id',p.id),"Erro ao salvar visibilidade"); }
     else if(act==="zoom"){ const lg=prevLayerGroups[p.id]; if(lg&&lg.getLayers().length){map.fitBounds(lg.getBounds(),{padding:[40,40]});} }
-    else if(act==="del"){ if(!confirm("Remover a preventiva \""+p.name+"\"?")) return;
+    else if(act==="del"){ if(!requireAdmin()||!confirm("Remover a preventiva \""+p.name+"\"?")) return;
       if(prevLayerGroups[p.id]){map.removeLayer(prevLayerGroups[p.id]);delete prevLayerGroups[p.id];}
       state.preventivas=state.preventivas.filter(x=>x.id!==p.id); refresh();
       sbCall(()=>sb.from('preventivas').delete().eq('id',p.id),"Erro ao remover preventiva"); }
@@ -933,6 +1412,7 @@ function renderNotifFileList(){
   const totalCount=state.notifications.length;
   tag.textContent=state.notifFiles.length+" arquivo"+(state.notifFiles.length>1?"s":"")+" · "+totalCount+" notific"+(totalCount===1?"ação":"ações");
   loaded.querySelectorAll("[data-act='ndel']").forEach(b=>b.onclick=()=>{
+    if(!requireAdmin()) return;
     if(!confirm("Remover esta planilha e suas notificações do mapa?")) return;
     state.notifications=state.notifications.filter(n=>n.fileId!==b.dataset.id);
     state.notifFiles=state.notifFiles.filter(x=>x.id!==b.dataset.id);
@@ -1004,6 +1484,30 @@ function refresh(){
   updateNotifStats();
   refreshLegend();
   updateKpis(cov);
+  labelIconButtons(document);
+  applyPermissions();
+}
+
+/* O painel lateral pode mudar de altura ao recalcular a cobertura. Em alguns
+   Chrome/Windows isso fazia o flex container do mapa encolher e deixava uma
+   faixa preta abaixo dele. Mantemos o estágio com a altura útil da janela e
+   só então pedimos ao Leaflet para redesenhar o canvas. */
+let mapLayoutFrame=0;
+function syncMapLayout(){
+  cancelAnimationFrame(mapLayoutFrame);
+  mapLayoutFrame=requestAnimationFrame(()=>{
+    const stage=document.querySelector(".stage");
+    document.querySelectorAll(".scroll > .block.open").forEach(positionOpenPanel);
+    if(window.matchMedia("(min-width:821px)").matches){
+      const height=Math.max(0,window.innerHeight-stage.getBoundingClientRect().top);
+      stage.style.height=height+"px";
+      stage.style.flex="0 0 "+height+"px";
+    }else{
+      stage.style.height="";
+      stage.style.flex="";
+    }
+    map.invalidateSize({pan:false});
+  });
 }
 
 function fitAll(){
@@ -1018,6 +1522,7 @@ function fitAll(){
 
 /* ============ Uploads ============ */
 async function addMain(files){
+  if(!requireAdmin()) return;
   let ok=0,fail=0;
   for(const file of files){
     try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file,{images:false});
@@ -1033,16 +1538,18 @@ async function addMain(files){
   else toast("Falha ao ler o(s) arquivo(s).","err");
 }
 async function addPrev(files){
+  if(!await ensureEditorAccess()) return;
   let ok=0,fail=0;
   for(const file of files){
     try{ const {geojson:gj,images}=await readGeo(file);
       const p={id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),date:todayISO(),ga:"",color:COLORS[colorIx++%COLORS.length],visible:true,geojson:gj};
       processPhotos(p,images);
+      const saved=await sbCall(()=>sb.from('preventivas').insert(p), "Erro ao salvar preventiva");
+      if(!saved){ fail++; continue; }
       state.preventivas.push(p); renderPrev(p); ok++;
-      sbCall(()=>sb.from('preventivas').insert(p), "Erro ao salvar preventiva");
-    }catch(e){ fail++; console.warn(file.name,e); }
+    }catch(e){ fail++; console.warn(file.name,e); toast("Erro ao ler "+file.name+": "+e.message,"err"); }
   }
-  refresh();
+  refresh(); fitAll();
   if(ok&&!fail) toast(ok+" preventiva(s) adicionada(s).","ok");
   else if(ok&&fail) toast(ok+" adicionada(s), "+fail+" com erro.","err");
   else toast("Falha ao ler o(s) arquivo(s).","err");
@@ -1075,6 +1582,7 @@ async function fetchMapPoints(link){
 function notifKey(os,name){ return os+"|"+name; }
 
 async function addNotif(files){
+  if(!requireEditor()) return;
   if(typeof XLSX==="undefined"){ toast("Biblioteca de leitura de planilhas indisponível.","err"); return; }
   const seen=new Set(state.notifications.map(n=>notifKey(n.os,n.name)));
   let filesOk=0, filesFail=0;
@@ -1130,10 +1638,27 @@ async function addNotif(files){
 /* dropzones + inputs */
 function wireDrop(zone,input,handler){
   zone.onclick=()=>input.click();
-  input.onchange=e=>{ if(e.target.files.length)handler(e.target.files); input.value=""; };
+  zone.onkeydown=e=>{
+    if(e.key==="Enter"||e.key===" "){
+      e.preventDefault();
+      input.click();
+    }
+  };
+  input.onchange=async e=>{
+    // FileList é "vivo": limpar o input também esvazia a mesma referência.
+    // Copiamos os arquivos antes para garantir que o upload selecionado siga
+    // para leitura, renderização e persistência.
+    const files=Array.from(e.target.files||[]);
+    input.value="";
+    if(!files.length) return;
+    try{ await handler(files); } finally { collapsePanelsAfterAction(); }
+  };
   ["dragenter","dragover"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.add("hot");}));
   ["dragleave","drop"].forEach(ev=>zone.addEventListener(ev,e=>{e.preventDefault();zone.classList.remove("hot");}));
-  zone.addEventListener("drop",e=>{ if(e.dataTransfer.files.length)handler(e.dataTransfer.files); });
+  zone.addEventListener("drop",async e=>{
+    if(!e.dataTransfer.files.length) return;
+    try{ await handler(e.dataTransfer.files); } finally { collapsePanelsAfterAction(); }
+  });
 }
 wireDrop($("dropMain"),$("fileMain"),f=>addMain(f));
 wireDrop($("dropPrev"),$("filePrev"),f=>addPrev(f));
@@ -1161,6 +1686,7 @@ function populateMainFolderSelect(entries){
     ).join("");
 }
 async function loadMainFolderFromCloud(){
+  if(!canAdmin())return;
   try{
     const {data:rootEntries,error}=await sb.storage.from(KMZ_BUCKET).list("",{limit:1000});
     if(error) throw error;
@@ -1179,7 +1705,28 @@ async function loadMainFolderFromCloud(){
     if(sel) sel.innerHTML='<option value="" disabled>Erro ao listar KMZ na nuvem.</option>';
   }
 }
+$("btnClearMainSelection").onclick=()=>{
+  const sel=$("mainFolderSelect");
+  const selected=Array.from(sel.selectedOptions);
+  selected.forEach(option=>option.selected=false);
+  sel.selectedIndex=-1;
+  sel.value="";
+  sel.blur();
+  Object.values(mainLayerGroups).forEach(layer=>map.removeLayer(layer));
+  Object.keys(mainLayerGroups).forEach(id=>delete mainLayerGroups[id]);
+  mainPointMarkers=[];
+  mainAssets=[];
+  const clearedMains=state.mains.length;
+  state.mains=[];
+  refresh();
+  if(selected.length||clearedMains){
+    toast("Seleções e visualização da rede principal limpas. Use Recarregar para restaurar.","ok");
+  }else{
+    toast("Nenhuma seleção ou rede principal para limpar.","err");
+  }
+};
 $("btnLoadSelectedMains").onclick=async()=>{
+  if(!requireAdmin()) return;
   const sel=$("mainFolderSelect");
   const picked=Array.from(sel.selectedOptions).map(o=>mainFolderFiles[o.value]).filter(Boolean);
   if(!picked.length){ toast("Selecione ao menos um arquivo na lista (Ctrl/Cmd+clique para vários).","err"); return; }
@@ -1196,9 +1743,14 @@ $("btnLoadSelectedMains").onclick=async()=>{
       files.push(new File([data],p.name));
     }
     if(files.length){ btn.textContent="Processando no mapa…"; await replaceMains(files); }
-  } finally { btn.disabled=false; btn.textContent=btnTextOrig; }
+  } finally {
+    btn.disabled=false;
+    btn.textContent=btnTextOrig;
+    collapsePanelsAfterAction();
+  }
 };
 async function replaceMains(files){
+  if(!requireAdmin()) return;
   Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
   Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
   const oldIds=state.mains.map(m=>m.id);
@@ -1211,14 +1763,15 @@ async function replaceMains(files){
 /* radius + highlight */
 $("radius").oninput=e=>{ state.radius=+e.target.value; $("radiusVal").textContent=state.radius+" m"; };
 function saveSettings(){
+  if(!canEdit()) return Promise.resolve(true);
   return sbCall(()=>sb.from('settings').upsert({id:1,radius:state.radius,highlight:state.highlight,showLabels:state.showLabels,
     showCTO:state.showCTO,showCEO:state.showCEO,showNotifications:state.showNotifications}), "Erro ao salvar configurações");
 }
 $("radius").onchange=()=>{ refresh(); saveSettings(); };
 $("hl").onchange=e=>{ state.highlight=e.target.checked; refresh(); saveSettings(); };
 $("showLabels").onchange=e=>{ state.showLabels=e.target.checked; state.preventivas.forEach(renderPrev); saveSettings(); };
-$("showCTO").onchange=e=>{ state.showCTO=e.target.checked; refresh(); saveSettings(); };
-$("showCEO").onchange=e=>{ state.showCEO=e.target.checked; refresh(); saveSettings(); };
+$("showCTO").onchange=e=>{ state.showCTO=e.target.checked; refresh(); syncMapLayout(); saveSettings(); };
+$("showCEO").onchange=e=>{ state.showCEO=e.target.checked; refresh(); syncMapLayout(); saveSettings(); };
 $("showNotif").onchange=e=>{
   state.showNotifications=e.target.checked;
   if(state.showNotifications) notifLayerGroup.addTo(map); else map.removeLayer(notifLayerGroup);
@@ -1227,24 +1780,31 @@ $("showNotif").onchange=e=>{
 
 /* limpar */
 $("clearAll").onclick=async()=>{
-  if(!confirm("Limpar rede principal, preventivas e notificações de TODOS OS DISPOSITIVOS? Esta ação não pode ser desfeita.")) return;
-  Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
-  Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
-  Object.values(prevLayerGroups).forEach(g=>map.removeLayer(g));
-  Object.keys(prevLayerGroups).forEach(k=>delete prevLayerGroups[k]);
-  notifLayerGroup.clearLayers(); notifMarkers={};
-  state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:state.radius,highlight:state.highlight,showLabels:state.showLabels};
-  renderMain(); refresh();
-  await Promise.all([
+  if(!requireAdmin()) return;
+  if(!confirm("Limpar a rede principal e as notificações de TODOS OS DISPOSITIVOS? As preventivas anexadas serão mantidas.")) return;
+  if(prompt("Para confirmar a limpeza global, digite LIMPAR.")!=="LIMPAR"){
+    toast("Limpeza global cancelada.","err");
+    return;
+  }
+  const cleared=await Promise.all([
     sbCall(()=>sb.from('notifications').delete().not('id','is',null), "Erro ao limpar notificações"),
     sbCall(()=>sb.from('notif_files').delete().not('id','is',null), "Erro ao limpar arquivos de notificações"),
-    sbCall(()=>sb.from('preventivas').delete().not('id','is',null), "Erro ao limpar preventivas"),
     sbCall(()=>sb.from('mains').delete().not('id','is',null), "Erro ao limpar rede principal"),
   ]);
-  toast("Tudo limpo.","ok");
+  if(!cleared.every(Boolean)){
+    toast("A limpeza não foi concluída. Recarregue os dados antes de tentar novamente.","err");
+    return;
+  }
+  Object.values(mainLayerGroups).forEach(g=>map.removeLayer(g));
+  Object.keys(mainLayerGroups).forEach(k=>delete mainLayerGroups[k]);
+  notifLayerGroup.clearLayers(); notifMarkers={};
+  state={...state,mains:[],notifFiles:[],notifications:[]};
+  renderMain(); refresh();
+  toast("Rede principal e notificações limpas. Preventivas mantidas.","ok");
 };
-$("btnReload").onclick=()=>loadAll();
+$("btnReload").onclick=()=>loadAll(false);
 $("btnSavePrev").onclick=async()=>{
+  if(!requireEditor()) return;
   if(!state.preventivas.length){ toast("Nenhuma preventiva pra salvar.","err"); return; }
   const rows=state.preventivas.map(p=>({id:p.id,name:p.name,date:p.date,ga:p.ga,color:p.color,visible:p.visible,geojson:p.geojson}));
   const ok=await sbCall(()=>sb.from('preventivas').upsert(rows), "Erro ao salvar preventivas");
@@ -1257,6 +1817,7 @@ async function sbCall(fn, errMsg){
     const {error}=await fn();
     if(error) throw error;
     setSaveBadge(true);
+    if(publicSyncChannel) publicSyncChannel.send({type:"broadcast",event:"data-changed",payload:{at:Date.now()}});
     return true;
   }catch(e){
     console.warn(errMsg,e);
@@ -1291,15 +1852,19 @@ function cacheOpen(){
   });
 }
 async function cacheSet(key,value){
+  if(!currentUser)return;
   try{
     const db=await withTimeout(cacheOpen(),1500);
-    await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readwrite"); tx.objectStore(CACHE_STORE).put(value,key); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); }),1500);
+    const scopedKey=currentUser.id+":"+key;
+    await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readwrite"); tx.objectStore(CACHE_STORE).put(value,scopedKey); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); }),1500);
   }catch(e){ console.warn("cacheSet",key,e); }
 }
 async function cacheGet(key){
+  if(!currentUser)return null;
   try{
     const db=await withTimeout(cacheOpen(),1500);
-    return await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readonly"); const req=tx.objectStore(CACHE_STORE).get(key); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }),1500);
+    const scopedKey=currentUser.id+":"+key;
+    return await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readonly"); const req=tx.objectStore(CACHE_STORE).get(scopedKey); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }),1500);
   }catch(e){ console.warn("cacheGet",key,e); return null; }
 }
 
@@ -1313,7 +1878,9 @@ async function withRetry(queryFn, tries, delayMs){
   }
   return res;
 }
-async function loadAll(){
+async function loadAll(silent){
+  if(!hasContentAccess()){clearProtectedState();return;}
+  silent=!!silent;
   $("btnReload") && ($("btnReload").disabled=true);
   const [mainsRes,prevRes,filesRes,notifRes,settingsRes]=await Promise.all([
     withRetry(()=>sb.from('mains').select('*').order('created_at')),
@@ -1352,12 +1919,57 @@ async function loadAll(){
   renderMain(); state.preventivas.forEach(renderPrev); renderAllNotifMarkers();
   if(state.showNotifications) notifLayerGroup.addTo(map); else map.removeLayer(notifLayerGroup);
   refresh();
-  setTimeout(fitAll,200);
-  if(failed.length) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no topo) para tentar de novo.","err");
-  else if(stale.length) toast("Servidor indisponível agora — mostrando última versão salva neste navegador: "+stale.join(", ")+".","err");
-  else if(state.mains.length||state.preventivas.length||state.notifications.length) toast("Dados carregados do Supabase.","ok");
+  if(!silent) setTimeout(fitAll,200);
+  if(failed.length){
+    setSaveBadge(false);
+    if(!silent) toast("Não carregou agora: "+failed.join(", ")+". Toque em “↻ Recarregar” (no topo) para tentar de novo.","err");
+  }else if(stale.length){
+    setSaveBadge(false);
+    if(!silent) toast("Servidor indisponível agora — mostrando última versão salva neste navegador: "+stale.join(", ")+".","err");
+  }else{
+    setSaveBadge(true);
+    if(!silent&&(state.mains.length||state.preventivas.length||state.notifications.length)) toast("Dados compartilhados carregados do Supabase.","ok");
+  }
   $("btnReload") && ($("btnReload").disabled=false);
+  protectedDataLoaded=true;
 }
+
+function clearProtectedState(){
+  Object.values(mainLayerGroups).forEach(layer=>map.hasLayer(layer)&&map.removeLayer(layer));
+  Object.values(prevLayerGroups).forEach(layer=>map.hasLayer(layer)&&map.removeLayer(layer));
+  Object.keys(mainLayerGroups).forEach(key=>delete mainLayerGroups[key]);Object.keys(prevLayerGroups).forEach(key=>delete prevLayerGroups[key]);
+  notifLayerGroup.clearLayers();Object.keys(notifMarkers).forEach(key=>delete notifMarkers[key]);mainPointMarkers=[];mainAssets=[];
+  state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:50,highlight:true,showLabels:true,showCTO:true,showCEO:true,showNotifications:true};
+  protectedDataLoaded=false;renderMain();refresh();setSaveBadge(false);
+}
+async function loadProtectedData(silent){
+  if(!hasContentAccess())return;
+  await loadAll(!!silent);
+  if(canAdmin()){await loadMainFolderFromCloud();await refreshPendingAccess(true);}
+}
+
+/* Sincroniza mudanças feitas em qualquer dispositivo. O canal em tempo real
+   atualiza quase imediatamente; a verificação periódica cobre projetos onde
+   o Realtime ainda não esteja habilitado para alguma tabela. */
+let sharedReloadTimer=0;
+function scheduleSharedReload(delay){
+  if(!hasContentAccess())return;
+  clearTimeout(sharedReloadTimer);
+  sharedReloadTimer=setTimeout(()=>{
+    if(document.visibilityState==="visible"&&navigator.onLine) loadAll(true);
+  },delay==null?700:delay);
+}
+publicSyncChannel=sb.channel("jarvis-public-sync")
+  .on("postgres_changes",{event:"*",schema:"public"},()=>scheduleSharedReload(500))
+  .on("postgres_changes",{event:"*",schema:"public",table:"user_access"},()=>{if(canAdmin()){refreshPendingAccess(true);if($("accessModal").classList.contains("show"))loadAccessUsers();}})
+  .on("broadcast",{event:"data-changed"},()=>scheduleSharedReload(300));
+publicSyncChannel.subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")console.warn("Realtime indisponível; sincronização periódica ativa.");});
+setInterval(()=>scheduleSharedReload(0),30000);
+setInterval(()=>{if(canAdmin())refreshPendingAccess(true);},30000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")scheduleSharedReload(150);});
+window.addEventListener("focus",()=>scheduleSharedReload(150));
+window.addEventListener("online",()=>scheduleSharedReload(150));
+window.addEventListener("pageshow",event=>{if(event.persisted)scheduleSharedReload(150);});
 
 /* ============ Exportação ============ */
 function hexToKml(hex){ // #RRGGBB -> aabbggrr
@@ -1424,11 +2036,10 @@ $("expCsv").onclick=()=>{
 
 /* ============ Start ============ */
 $("lightbox").onclick=()=>$("lightbox").classList.remove("show");
-document.addEventListener("keydown",e=>{ if(e.key==="Escape")$("lightbox").classList.remove("show"); });
-loadAll();
-loadMainFolderFromCloud();
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){$("lightbox").classList.remove("show");closeAccessModal();}});
+initAccess().catch(error=>{console.warn("initAccess",error);currentUser=null;currentRole="public";applyPermissions();clearProtectedState();});
 setTimeout(()=>map.invalidateSize(),300);
-window.addEventListener("resize",()=>map.invalidateSize());
+window.addEventListener("resize",syncMapLayout);
 /* Alguns Windows/Chrome deixam uma faixa da página sem repintar depois de
    restaurar/mover/trocar de monitor a janela (bug do compositor do navegador,
    não da página). Força um reflow completo + reajusta o mapa nesses gatilhos,
@@ -1437,10 +2048,11 @@ function forceReflow(){
   document.body.style.display="none";
   void document.body.offsetHeight; // força o navegador a aplicar antes de reverter
   document.body.style.display="";
-  map.invalidateSize();
+  syncMapLayout();
 }
 window.addEventListener("focus",forceReflow);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) forceReflow(); });
+syncMapLayout();
 </script>
 </body>
 </html>
