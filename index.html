@@ -10,7 +10,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/togeojson/0.16.0/togeojson.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.55.0"></script>
 
 <style>
   :root{
@@ -309,6 +309,10 @@
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   :focus-visible{outline:2px solid var(--optic);outline-offset:2px}
+  .password-wrap{display:flex;gap:6px;align-items:stretch}
+  .password-wrap input{flex:1;min-width:0}
+  .password-toggle{flex:0 0 auto;min-width:76px;justify-content:center}
+  .field-help{font-size:10px;color:var(--ink-3);margin-top:4px}
 </style>
 </head>
 <body data-access="public">
@@ -364,7 +368,7 @@
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>
     <span id="accessLabel">Entrar</span><span class="pending-badge" id="pendingAccessBadge" hidden>0</span>
   </button>
-  <div class="save-badge" id="saveBadge" style="margin-left:auto"><span class="dot done"></span>Conectando ao Supabase</div>
+  <div class="save-badge" id="saveBadge" style="margin-left:auto" role="status" aria-live="polite"><span class="dot"></span>Entre para sincronizar</div>
   <aside>
     <div class="scroll">
 
@@ -373,8 +377,9 @@
         <h2><span class="dot optic"></span>Rede principal <span class="tag" id="mainTag"></span></h2>
         <div class="body">
           <div class="field" id="mainFolderRow" style="margin-bottom:11px">
-            <label id="mainFolderLabel">Rede principal por UF — arquivos na nuvem (Ctrl/Cmd+clique para selecionar vários)</label>
-            <select id="mainFolderSelect" multiple size="6"><option value="" disabled>Carregando lista…</option></select>
+            <label id="mainFolderLabel" for="mainFolderSelect">Rede principal por UF — selecione um ou mais arquivos</label>
+            <select id="mainFolderSelect" multiple size="6" aria-describedby="mainFolderHelp"><option value="" disabled>Carregando lista…</option></select>
+            <div class="field-help" id="mainFolderHelp">No celular, toque nos itens desejados. No computador, use Ctrl/Cmd para escolher vários.</div>
             <button class="btn" id="btnLoadSelectedMains" style="margin-top:7px">Carregar selecionados</button>
             <button class="btn" id="btnClearMainSelection" type="button" style="margin-top:7px">Limpar seleções</button>
           </div>
@@ -386,7 +391,7 @@
           <div class="empty" id="mainEmpty" style="margin-top:11px">Nenhum arquivo da rede principal anexado.</div>
           <div id="mainLoaded" style="display:none;margin-top:11px"></div>
           <div class="field" id="assetSearchRow" style="margin-top:11px">
-            <label>Buscar CTO/CEO no mapa</label>
+            <label for="assetSearch">Buscar CTO/CEO no mapa</label>
             <div style="display:flex;gap:6px">
               <input type="text" id="assetSearch" placeholder="ex.: CTO-15" style="flex:1">
               <button class="icon-btn" id="assetSearchBtn" type="button" aria-label="Buscar CTO ou CEO" title="Buscar" style="border:1px solid var(--line);flex:0 0 auto">
@@ -475,10 +480,10 @@
   <div class="access-dialog">
     <div class="access-head"><div><h3 id="accessTitle">Acessos do sistema</h3><p>O conteúdo é exibido somente após aprovação do Administrador.</p></div><button class="icon-btn" id="closeAccess" type="button" aria-label="Fechar acessos">×</button></div>
     <div id="signedOutAccess" class="access-form">
-      <div class="field"><label>Nome completo (para solicitar acesso)</label><input id="requestAccessName" type="text" maxlength="120" autocomplete="name" placeholder="Seu nome"></div>
-      <div class="field"><label>Telefone (opcional)</label><input id="requestAccessPhone" type="tel" maxlength="40" autocomplete="tel" placeholder="(00) 00000-0000"></div>
-      <div class="field"><label>E-mail</label><input id="accessEmail" type="email" autocomplete="username" placeholder="seu@email.com"></div>
-      <div class="field"><label>Senha</label><input id="accessPassword" type="password" autocomplete="current-password" minlength="8" placeholder="Mínimo de 8 caracteres"></div>
+      <div class="field"><label for="requestAccessName">Nome completo (para solicitar acesso)</label><input id="requestAccessName" type="text" maxlength="120" autocomplete="name" placeholder="Seu nome"></div>
+      <div class="field"><label for="requestAccessPhone">Telefone (opcional)</label><input id="requestAccessPhone" type="tel" maxlength="40" autocomplete="tel" inputmode="tel" placeholder="(00) 00000-0000"></div>
+      <div class="field"><label for="accessEmail">E-mail</label><input id="accessEmail" type="email" autocomplete="username" inputmode="email" placeholder="seu@email.com"></div>
+      <div class="field"><label for="accessPassword">Senha</label><div class="password-wrap"><input id="accessPassword" type="password" autocomplete="current-password" minlength="8" aria-describedby="passwordHelp" placeholder="Mínimo de 8 caracteres"><button class="btn password-toggle" type="button" data-password-target="accessPassword" aria-label="Mostrar senha">Mostrar</button></div><div class="field-help" id="passwordHelp">Use pelo menos 8 caracteres.</div></div>
       <div class="btn-row"><button class="btn primary" id="loginAccess" type="button">Entrar</button><button class="btn" id="requestAccess" type="button">Solicitar acesso</button></div>
       <button class="btn" id="resetAccess" type="button">Recuperar senha</button>
     </div>
@@ -489,11 +494,11 @@
         <div class="pending-alert" id="pendingAccessAlert" hidden><b id="pendingAccessText"></b><br>Abra uma conta pendente, configure os pontos permitidos e marque “Aprovado”.</div>
         <div class="access-create">
           <h4>Criar nova conta</h4>
-          <div class="field"><label>Nome completo</label><input id="newAccessName" type="text" maxlength="120" placeholder="Nome do usuário"></div>
-          <div class="field"><label>Telefone</label><input id="newAccessPhone" type="tel" maxlength="40" placeholder="(00) 00000-0000"></div>
-          <div class="field wide"><label>E-mail</label><input id="newAccessEmail" type="email" autocomplete="off" placeholder="usuario@email.com"></div>
-          <div class="field"><label>Senha temporária</label><input id="newAccessPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo de 8 caracteres"></div>
-          <div class="field"><label>Tipo de acesso</label><select id="newAccessRole"><option value="viewer">Visualizador</option><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>
+          <div class="field"><label for="newAccessName">Nome completo</label><input id="newAccessName" type="text" maxlength="120" placeholder="Nome do usuário"></div>
+          <div class="field"><label for="newAccessPhone">Telefone</label><input id="newAccessPhone" type="tel" maxlength="40" inputmode="tel" placeholder="(00) 00000-0000"></div>
+          <div class="field wide"><label for="newAccessEmail">E-mail</label><input id="newAccessEmail" type="email" autocomplete="off" inputmode="email" placeholder="usuario@email.com"></div>
+          <div class="field"><label for="newAccessPassword">Senha temporária</label><div class="password-wrap"><input id="newAccessPassword" type="password" autocomplete="new-password" minlength="8" placeholder="Mínimo de 8 caracteres"><button class="btn password-toggle" type="button" data-password-target="newAccessPassword" aria-label="Mostrar senha temporária">Mostrar</button></div></div>
+          <div class="field"><label for="newAccessRole">Tipo de acesso</label><select id="newAccessRole"><option value="viewer">Visualizador</option><option value="editor">Editor</option><option value="admin">Administrador</option></select></div>
           <p class="empty wide" style="margin:0;padding:0;text-align:left">A conta será criada como pendente. Depois selecione os pontos e marque o acesso como aprovado.</p>
           <button class="btn primary" id="createAccessUser" type="button">Criar conta pendente</button>
         </div>
@@ -501,7 +506,7 @@
         <div class="access-list" id="accessList"></div>
         <div class="point-editor" id="pointAccessEditor" hidden>
           <div class="point-editor-head"><div><h4 id="pointAccessTitle">Pontos permitidos</h4><small id="pointAccessCount"></small></div><button class="icon-btn" id="closePointAccess" type="button" aria-label="Fechar seleção de pontos">×</button></div>
-          <div class="field" style="margin-top:10px"><label>Buscar preventiva, OS, ponto ou município</label><input id="pointAccessSearch" type="search" placeholder="Digite para filtrar"></div>
+          <div class="field" style="margin-top:10px"><label for="pointAccessSearch">Buscar preventiva, OS, ponto ou município</label><input id="pointAccessSearch" type="search" placeholder="Digite para filtrar"></div>
           <div class="point-tools"><button class="btn" id="selectVisiblePoints" type="button">Marcar resultados</button><button class="btn" id="clearUserPoints" type="button">Limpar seleção</button></div>
           <div class="point-results" id="pointAccessResults"></div>
           <p class="point-note" id="pointAccessNote"></p>
@@ -523,13 +528,14 @@
 
 /* ============ Estado ============ */
 const SUPABASE_URL = "https://hhwghwqynrxrksrzjvgc.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
-const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 let publicSyncChannel=null;
 const COLORS = ["#f59e0b","#a78bfa","#f472b6","#38bdf8","#4ade80","#fb923c","#e879f9","#2dd4bf","#facc15","#60a5fa","#fca5a5","#c084fc"];
 let state = { mains:[], preventivas:[], notifFiles:[], notifications:[], radius:50, highlight:true, showLabels:true, showCTO:true, showCEO:true, showNotifications:true };
 let colorIx = 0;
 let currentUser=null,currentRole="public",protectedDataLoaded=false,pendingAccessCount=0,pendingNoticeShown=false,accessRefreshPromise=null;
+let accessModalReturnFocus=null,loadAllPromise=null;
 let pointAccessUser=null,pointAccessCatalog={preventivas:[],notifications:[]},selectedPreventivaIds=new Set(),selectedNotificationIds=new Set();
 
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
@@ -686,11 +692,32 @@ function requireEditor(){if(canEdit())return true;toast("Entre com um acesso de 
 function requireAdmin(){if(canAdmin())return true;toast("Esta ação exige acesso de Administrador.","err");openAccessModal();return false;}
 function setAccessMessage(message,isError){const el=$("accessMessage");el.textContent=message||"";el.style.color=isError?"#ffc1bf":"";}
 function openAccessModal(){
+  accessModalReturnFocus=document.activeElement;
   $("accessModal").classList.add("show");setAccessMessage("");
   if(currentUser&&canAdmin()) loadAccessUsers();
-  else if(!currentUser) setTimeout(()=>$("accessEmail").focus(),60);
+  setTimeout(()=>{const target=currentUser?$("logoutAccess"):$("accessEmail");if(target&&!target.hidden)target.focus();},60);
 }
-function closeAccessModal(){$("accessModal").classList.remove("show");}
+function closeAccessModal(){
+  const wasOpen=$("accessModal").classList.contains("show");
+  $("accessModal").classList.remove("show");
+  if(wasOpen&&accessModalReturnFocus&&document.contains(accessModalReturnFocus))accessModalReturnFocus.focus();
+  accessModalReturnFocus=null;
+}
+function trapAccessModalFocus(event){
+  if(event.key!=="Tab"||!$("accessModal").classList.contains("show"))return;
+  const focusable=Array.from($("accessModal").querySelectorAll('button:not([disabled]):not([hidden]),input:not([disabled]):not([hidden]),select:not([disabled]):not([hidden]),a[href]')).filter(el=>el.offsetParent!==null);
+  if(!focusable.length)return;
+  const first=focusable[0],last=focusable[focusable.length-1];
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+}
+function friendlyAuthError(error){
+  const message=String(error&&error.message||"").toLowerCase();
+  if(message.includes("invalid login")||message.includes("invalid credentials"))return "E-mail ou senha inválidos.";
+  if(message.includes("email not confirmed"))return "Confirme seu e-mail antes de entrar.";
+  if(message.includes("rate limit")||message.includes("too many"))return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  return "Não foi possível concluir agora. Verifique sua conexão e tente novamente.";
+}
 function applyPermissions(){
   document.body.dataset.access=currentRole;
   $("accessLabel").textContent=currentUser?roleNames[currentRole]:"Entrar";
@@ -844,14 +871,14 @@ async function initAccess(){
     const email=$("accessEmail").value.trim(),password=$("accessPassword").value;
     if(!email||!password){setAccessMessage("Informe e-mail e senha.",true);return;}
     setAccessMessage("Entrando…");const {error}=await sb.auth.signInWithPassword({email,password});
-    if(error){setAccessMessage("Não foi possível entrar: "+error.message,true);return;}
+    if(error){setAccessMessage(friendlyAuthError(error),true);return;}
     const allowed=await refreshAccessSession();if(allowed){setAccessMessage("Acesso realizado com sucesso.");await loadProtectedData(false);closeAccessModal();}
   };
   $("requestAccess").onclick=async()=>{
     const name=$("requestAccessName").value.trim(),phone=$("requestAccessPhone").value.trim(),email=$("accessEmail").value.trim(),password=$("accessPassword").value;
     if(!name||!email||password.length<8){setAccessMessage("Informe nome, e-mail e uma senha com pelo menos 8 caracteres.",true);return;}
     setAccessMessage("Enviando solicitação…");const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,phone},emailRedirectTo:location.origin+location.pathname}});
-    if(error){setAccessMessage("Não foi possível solicitar: "+error.message,true);return;}
+    if(error){setAccessMessage(friendlyAuthError(error),true);return;}
     if(data.session)await sb.auth.signOut({scope:"local"});
     setAccessMessage("Solicitação criada. Confirme o e-mail, se solicitado, e aguarde a aprovação do Administrador.");
   };
@@ -869,15 +896,21 @@ async function initAccess(){
   $("resetAccess").onclick=async()=>{
     const email=$("accessEmail").value.trim();if(!email){setAccessMessage("Informe o e-mail para recuperar a senha.",true);return;}
     const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-    setAccessMessage(error?"Não foi possível enviar: "+error.message:"E-mail de recuperação enviado.",!!error);
+    setAccessMessage(error?friendlyAuthError(error):"Se o e-mail estiver cadastrado, você receberá as instruções de recuperação.",!!error);
   };
-  $("logoutAccess").onclick=async()=>{await sb.auth.signOut();await refreshAccessSession();clearProtectedState();closeAccessModal();toast("Acesso encerrado.","ok");};
+  $("logoutAccess").onclick=async()=>{await sb.auth.signOut();await clearProtectedCache();await refreshAccessSession();clearProtectedState();closeAccessModal();toast("Acesso encerrado e dados locais removidos.","ok");};
   $("refreshAccess").onclick=loadAccessUsers;
   $("closePointAccess").onclick=()=>{$("pointAccessEditor").hidden=true;pointAccessUser=null;};
   $("pointAccessSearch").oninput=renderPointAccessOptions;
   $("selectVisiblePoints").onclick=()=>{const filtered=filteredPointCatalog();filtered.preventivas.forEach(p=>selectedPreventivaIds.add(p.id));filtered.notifications.forEach(n=>selectedNotificationIds.add(n.id));renderPointAccessOptions();};
   $("clearUserPoints").onclick=()=>{selectedPreventivaIds.clear();selectedNotificationIds.clear();renderPointAccessOptions();};
   $("savePointAccess").onclick=savePointAccess;
+  document.querySelectorAll("[data-password-target]").forEach(button=>button.onclick=()=>{
+    const input=$(button.dataset.passwordTarget),show=input.type==="password";
+    input.type=show?"text":"password";button.textContent=show?"Ocultar":"Mostrar";
+    button.setAttribute("aria-label",(show?"Ocultar":"Mostrar")+(button.dataset.passwordTarget==="newAccessPassword"?" senha temporária":" senha"));
+  });
+  $("accessModal").addEventListener("keydown",trapAccessModalFocus);
   sb.auth.onAuthStateChange(()=>setTimeout(async()=>{const allowed=await refreshAccessSession();if(allowed&&!protectedDataLoaded)await loadProtectedData(true);if(!allowed)clearProtectedState();},0));
   const allowed=await refreshAccessSession();if(allowed)await loadProtectedData(false);else clearProtectedState();
 }
@@ -1854,6 +1887,7 @@ async function sbCall(fn, errMsg){
   }
 }
 function setSaveBadge(ok){
+  if(ok==null){$("saveBadge").innerHTML='<span class="dot"></span>Entre para sincronizar';return;}
   $("saveBadge").innerHTML = ok
     ? '<span class="dot done"></span>Sincronizado com Supabase'
     : '<span class="dot warn"></span>Falha ao sincronizar — verifique sua conexão';
@@ -1868,7 +1902,7 @@ function chunk(arr,size){ const out=[]; for(let i=0;i<arr.length;i+=size) out.pu
    depois das tentativas, mostra a última versão que carregou com sucesso
    neste navegador em vez de deixar a tela vazia. Guardado com timeout pra
    nunca travar (IndexedDB pode nunca responder em páginas file://). */
-const CACHE_DB="jarvis_cache_db", CACHE_STORE="kv";
+const CACHE_DB="jarvis_cache_db", CACHE_STORE="kv", CACHE_MAX_AGE_MS=24*60*60*1000;
 function withTimeout(p,ms){ return new Promise((resolve,reject)=>{ const t=setTimeout(()=>reject(new Error("timeout")),ms); p.then(v=>{clearTimeout(t);resolve(v);},e=>{clearTimeout(t);reject(e);}); }); }
 function cacheOpen(){
   return new Promise((resolve,reject)=>{
@@ -1883,7 +1917,7 @@ async function cacheSet(key,value){
   try{
     const db=await withTimeout(cacheOpen(),1500);
     const scopedKey=currentUser.id+":"+key;
-    await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readwrite"); tx.objectStore(CACHE_STORE).put(value,scopedKey); tx.oncomplete=resolve; tx.onerror=()=>reject(tx.error); }),1500);
+    await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readwrite"); tx.objectStore(CACHE_STORE).put({savedAt:Date.now(),value},scopedKey); tx.oncomplete=()=>{db.close();resolve();}; tx.onerror=()=>{db.close();reject(tx.error);}; }),1500);
   }catch(e){ console.warn("cacheSet",key,e); }
 }
 async function cacheGet(key){
@@ -1891,8 +1925,15 @@ async function cacheGet(key){
   try{
     const db=await withTimeout(cacheOpen(),1500);
     const scopedKey=currentUser.id+":"+key;
-    return await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readonly"); const req=tx.objectStore(CACHE_STORE).get(scopedKey); req.onsuccess=()=>resolve(req.result); req.onerror=()=>reject(req.error); }),1500);
+    const cached=await withTimeout(new Promise((resolve,reject)=>{ const tx=db.transaction(CACHE_STORE,"readonly"); const req=tx.objectStore(CACHE_STORE).get(scopedKey); req.onsuccess=()=>{db.close();resolve(req.result);}; req.onerror=()=>{db.close();reject(req.error);}; }),1500);
+    if(!cached||typeof cached!=="object"||!("savedAt" in cached)||Date.now()-cached.savedAt>CACHE_MAX_AGE_MS)return null;
+    return cached.value;
   }catch(e){ console.warn("cacheGet",key,e); return null; }
+}
+async function clearProtectedCache(){
+  try{
+    await withTimeout(new Promise((resolve,reject)=>{const req=indexedDB.deleteDatabase(CACHE_DB);req.onsuccess=resolve;req.onerror=()=>reject(req.error);req.onblocked=resolve;}),2000);
+  }catch(e){console.warn("clearProtectedCache",e);}
 }
 
 async function withRetry(queryFn, tries, delayMs){
@@ -1905,7 +1946,7 @@ async function withRetry(queryFn, tries, delayMs){
   }
   return res;
 }
-async function loadAll(silent){
+async function loadAllCore(silent){
   if(!hasContentAccess()){clearProtectedState();return;}
   silent=!!silent;
   $("btnReload") && ($("btnReload").disabled=true);
@@ -1960,6 +2001,11 @@ async function loadAll(silent){
   $("btnReload") && ($("btnReload").disabled=false);
   protectedDataLoaded=true;
 }
+async function loadAll(silent){
+  if(loadAllPromise)return loadAllPromise;
+  loadAllPromise=loadAllCore(silent);
+  try{return await loadAllPromise;}finally{loadAllPromise=null;}
+}
 
 function clearProtectedState(){
   Object.values(mainLayerGroups).forEach(layer=>map.hasLayer(layer)&&map.removeLayer(layer));
@@ -1967,7 +2013,7 @@ function clearProtectedState(){
   Object.keys(mainLayerGroups).forEach(key=>delete mainLayerGroups[key]);Object.keys(prevLayerGroups).forEach(key=>delete prevLayerGroups[key]);
   notifLayerGroup.clearLayers();Object.keys(notifMarkers).forEach(key=>delete notifMarkers[key]);mainPointMarkers=[];mainAssets=[];
   state={mains:[],preventivas:[],notifFiles:[],notifications:[],radius:50,highlight:true,showLabels:true,showCTO:true,showCEO:true,showNotifications:true};
-  protectedDataLoaded=false;renderMain();refresh();setSaveBadge(false);
+  protectedDataLoaded=false;renderMain();refresh();setSaveBadge(null);
 }
 async function loadProtectedData(silent){
   if(!hasContentAccess())return;
@@ -1986,8 +2032,12 @@ function scheduleSharedReload(delay){
     if(document.visibilityState==="visible"&&navigator.onLine) loadAll(true);
   },delay==null?700:delay);
 }
-publicSyncChannel=sb.channel("jarvis-public-sync")
-  .on("postgres_changes",{event:"*",schema:"public"},()=>scheduleSharedReload(500))
+publicSyncChannel=sb.channel("jarvis-protected-sync")
+  .on("postgres_changes",{event:"*",schema:"public",table:"mains"},()=>scheduleSharedReload(500))
+  .on("postgres_changes",{event:"*",schema:"public",table:"preventivas"},()=>scheduleSharedReload(500))
+  .on("postgres_changes",{event:"*",schema:"public",table:"notif_files"},()=>scheduleSharedReload(500))
+  .on("postgres_changes",{event:"*",schema:"public",table:"notifications"},()=>scheduleSharedReload(500))
+  .on("postgres_changes",{event:"*",schema:"public",table:"settings"},()=>scheduleSharedReload(500))
   .on("postgres_changes",{event:"*",schema:"public",table:"user_access"},()=>{if(canAdmin()){refreshPendingAccess(true);if($("accessModal").classList.contains("show"))loadAccessUsers();}})
   .on("broadcast",{event:"data-changed"},()=>scheduleSharedReload(300));
 publicSyncChannel.subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")console.warn("Realtime indisponível; sincronização periódica ativa.");});

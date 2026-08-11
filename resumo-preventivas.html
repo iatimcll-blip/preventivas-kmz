@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Resumo de Preventivas — Jarvis MCLL</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.55.0"></script>
 <style>
   :root{
     --bg:#071019;--panel:#0d1720;--panel-2:#111e28;--line:#20313e;--line-soft:#172630;
@@ -75,7 +75,7 @@
 <main>
   <div class="hero">
     <div><h1>Resumo das preventivas realizadas</h1><p class="subtitle">Distâncias e informações consolidadas dos KMZ secundários.</p></div>
-    <div class="sync" id="sync">Carregando dados…</div>
+    <div class="sync" id="sync" role="status" aria-live="polite">Carregando dados…</div>
   </div>
 
   <section class="metrics" aria-label="Indicadores das preventivas">
@@ -95,8 +95,8 @@
 <script>
 "use strict";
 const SUPABASE_URL="https://hhwghwqynrxrksrzjvgc.supabase.co";
-const SUPABASE_ANON_KEY="sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
-const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_NvNrmOsZBz8PkOzsJCzavQ_3wSiWD2Q";
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
 let preventivas=[],loading=false,queuedLoad=false,canLoad=false;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -144,7 +144,7 @@ async function load(silent){
   try{
     const {data,error}=await db.from("preventivas").select("id,name,date,ga,color,visible,geojson,created_at").order("created_at",{ascending:true});
     if(error)throw error;preventivas=data||[];render();$("sync").textContent="Atualizado em "+new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"});
-  }catch(error){console.warn("Erro ao carregar preventivas",error);$("sync").textContent="Falha ao carregar";$("list").innerHTML='<div class="empty error">Não foi possível carregar as preventivas: '+esc(error.message)+'</div>';}
+  }catch(error){console.warn("Erro ao carregar preventivas",error);$("sync").textContent="Falha ao carregar";$("list").innerHTML='<div class="empty error">Não foi possível carregar as preventivas agora. Verifique sua conexão e tente novamente.</div>';}
   finally{
     loading=false;$("reload").disabled=false;
     if(queuedLoad){queuedLoad=false;setTimeout(()=>load(true),0);}
@@ -156,7 +156,7 @@ function scheduleSummaryReload(delay){
   clearTimeout(summaryReloadTimer);
   summaryReloadTimer=setTimeout(()=>{if(document.visibilityState==="visible"&&navigator.onLine)load(true);},delay==null?700:delay);
 }
-const publicSyncChannel=db.channel("jarvis-public-sync")
+const publicSyncChannel=db.channel("jarvis-protected-summary-sync")
   .on("postgres_changes",{event:"*",schema:"public",table:"preventivas"},()=>scheduleSummaryReload(500))
   .on("broadcast",{event:"data-changed"},()=>scheduleSummaryReload(300));
 publicSyncChannel.subscribe(status=>{if(status==="CHANNEL_ERROR"||status==="TIMED_OUT")console.warn("Realtime indisponível; sincronização periódica ativa.");});
