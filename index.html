@@ -550,16 +550,15 @@ let pointAccessUser=null,pointAccessCatalog={preventivas:[],notifications:[]},se
 /* ---- Fotos embutidas no KMZ (mantidas em memória, não persistidas) ---- */
 const PHOTOS = {};
 function findImg(src, images){
-  const keys=new Set(); const add=s=>{if(s)keys.add(s);};
-  const clean=src.replace(/^\.?\/+/,"");
-  add(src); add(clean);
-  try{add(decodeURIComponent(src));add(decodeURIComponent(clean));}catch(_){}
-  const base=clean.split("/").pop(); add(base);
-  try{add(decodeURIComponent(base));}catch(_){}
-  for(const k in images){ if(keys.has(k)) return images[k]; }
-  for(const k in images){ const kb=k.split("/").pop();
-    if(keys.has(kb)) return images[k];
-    try{ if(keys.has(decodeURIComponent(kb))) return images[k]; }catch(_){}
+  const normalize=value=>{
+    let result=String(value||"").trim().replace(/\\/g,"/").replace(/[?#].*$/,"").replace(/^file:\/+/i,"").replace(/^\.?\/+/,"");
+    try{result=decodeURIComponent(result);}catch(_){}
+    return result.toLocaleLowerCase();
+  };
+  const wanted=normalize(src),wantedBase=wanted.split("/").pop();
+  for(const path in images){
+    const normalized=normalize(path),base=normalized.split("/").pop();
+    if(normalized===wanted||base===wantedBase) return images[path];
   }
   return null;
 }
@@ -588,6 +587,15 @@ function prevPhotoCount(p){ let c=0; (p.geojson.features||[]).forEach(f=>{ if(f.
 function photoIcon(color){ return L.divIcon({className:"photo-pin-wrap",iconSize:[26,26],iconAnchor:[13,25],popupAnchor:[0,-24],
   html:'<div class="photo-pin" style="--pc:'+color+'"><svg viewBox="0 0 24 24" fill="none" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.2"/></svg></div>'}); }
 function openLightbox(src){ const lb=$("lightbox"); lb.querySelector("img").src=src; lb.classList.add("show"); }
+function photoGalleryHtml(photos){
+  if(!photos||!photos.length)return "";
+  let html='<div class="pv-gal">';
+  photos.forEach(tok=>{const src=resolveTok(tok);html+=src?'<img class="pv-th" src="'+esc(src)+'" data-full="'+esc(src)+'" alt="Foto do ponto no KMZ" loading="lazy">':'<div class="pv-noimg">Foto no KMZ<br><small>reanexe o arquivo para ver</small></div>';});
+  return html+'</div>';
+}
+function wirePhotoPopup(layer){
+  layer.on("popupopen",event=>{const container=event.popup.getElement();if(container)container.querySelectorAll(".pv-th[data-full]").forEach(img=>img.onclick=()=>openLightbox(img.dataset.full));});
+}
 
 /* ============ Mapa ============ */
 const map = L.map("map",{preferCanvas:true, zoomControl:true}).setView([-4.5,-45],6);
@@ -1046,7 +1054,9 @@ function renderMainOne(mo){
     },
     pointToLayer:(f,ll)=>{
       const nm=(f.properties&&(f.properties.name||f.properties.Name))||"";
-      const m=L.circleMarker(ll,{renderer:canvas,radius:4,weight:1.4,color:"#0b1219",fillColor:"#8fb7cc",fillOpacity:0.95});
+      const hasPhoto=!!(f.properties&&f.properties._hasPhoto);
+      const m=L.circleMarker(ll,{renderer:canvas,radius:hasPhoto?7:4,weight:hasPhoto?2:1.4,color:hasPhoto?"#2ad7e8":"#0b1219",fillColor:hasPhoto?"#082f36":"#8fb7cc",fillOpacity:0.95});
+      m._hasPhoto=hasPhoto;
       m._asset={lat:ll.lat,lng:ll.lng};
       m._assetType=classifyAssetType(nm);
       m._name=nm;
@@ -1054,8 +1064,9 @@ function renderMainOne(mo){
       return m;
     },
     onEachFeature:(f,l)=>{
-      const nm=(f.properties&&(f.properties.name||f.properties.Name));
-      if(nm) l.bindPopup("<b>"+esc(nm)+"</b><br><small style='color:#5f7080'>"+esc(mo.name)+"</small>");
+      const props=f.properties||{},nm=props.name||props.Name||"";
+      const html='<div class="pv-pop"><b>'+esc(nm||mo.name)+'</b><div class="pv-sub">Rede principal: '+esc(mo.name)+'</div>'+photoGalleryHtml(props._photos||[])+'</div>';
+      l.bindPopup(html,{maxWidth:280});wirePhotoPopup(l);
     }
   });
   if(mo.visible!==false) lg.addTo(map);
@@ -1094,15 +1105,11 @@ function renderPrev(p){
       let html='<div class="pv-pop"><b>'+esc(nm||p.name)+'</b>'
         +'<div class="pv-sub">Preventiva: '+esc(p.name)+(p.date?" • "+esc(p.date):"")+'</div>';
       if(photos.length){
-        html+='<div class="pv-gal">';
-        photos.forEach(tok=>{ const src=resolveTok(tok);
-          html+= src ? '<img class="pv-th" src="'+src+'" data-full="'+src+'" alt="foto da preventiva">'
-                     : '<div class="pv-noimg">Foto no KMZ<br><small>reanexe o arquivo para ver</small></div>'; });
-        html+='</div>';
+        html+=photoGalleryHtml(photos);
       }
       html+='</div>';
       l.bindPopup(html,{maxWidth:280});
-      l.on("popupopen",e=>{ const c=e.popup.getElement(); if(c) c.querySelectorAll(".pv-th").forEach(img=>img.onclick=()=>openLightbox(img.dataset.full)); });
+      wirePhotoPopup(l);
     }
   }).addTo(group);
 
@@ -1325,7 +1332,7 @@ function computeCoverage(){
     if(hidden){ m.setStyle({radius:0,opacity:0,fillOpacity:0}); return; }
     const as=assetByCoord.get(m._asset.lat+","+m._asset.lng);
     const done=hl&&as&&as.covered;
-    m.setStyle({fillColor:done?"#34d399":"#8fb7cc",color:done?"#08351f":"#0b1219",radius:done?5:4,opacity:1,fillOpacity:0.95});
+    m.setStyle({fillColor:done?"#34d399":m._hasPhoto?"#082f36":"#8fb7cc",color:done?"#08351f":m._hasPhoto?"#2ad7e8":"#0b1219",weight:m._hasPhoto?2:1.4,radius:done?5:m._hasPhoto?7:4,opacity:1,fillOpacity:0.95});
   });
 
   covBlock.style.display="";
@@ -1584,8 +1591,9 @@ async function addMain(files){
   if(!requireAdmin()) return;
   let ok=0,fail=0;
   for(const file of files){
-    try{ toast("Lendo "+file.name+"…"); const {geojson:gj}=await readGeo(file,{images:false});
+    try{ toast("Lendo "+file.name+"…"); const {geojson:gj,images}=await readGeo(file);
       const mo={id:uid(),name:file.name.replace(/\.(kmz|kml)$/i,""),geojson:gj,addedAt:Date.now()};
+      processPhotos(mo,images);
       state.mains.push(mo);
       sbCall(()=>sb.from('mains').insert(mo), "Erro ao salvar rede principal");
       ok++;
